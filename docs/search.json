@@ -606,7 +606,7 @@
     "href": "Week1-RSpatial.html#plotting-points",
     "title": "WILD 591 – Spatial Population Modeling",
     "section": "Plotting Points",
-    "text": "Plotting Points\n\nplot(sf::st_geometry(stations),\n     pch  = 19, cex = 1.3, col = \"#70002E\",\n     axes = TRUE,\n     main = \"Simulated survey stations (UTM 12N)\")\n\nbox(lwd = 2)\n\nTwenty-five stations scattered across the 12 × 12 km study area. Axis values are UTM eastings and northings in metres.\n\n\n\n\n\n\nTip\n\n\nplot(stations) without st_geometry() draws one small panel per attribute column. Wrap in st_geometry() when you only want the shapes."
+    "text": "Plotting Points\n\nplot(sf::st_geometry(stations),\n     pch  = 19,\n     cex = 1.3,\n     col = \"#70002E\",\n     axes = TRUE,\n     main = \"Simulated survey stations (UTM 12N)\")\n\nbox(lwd = 2)\n\nTwenty-five stations scattered across the 12 × 12 km study area. Axis values are UTM eastings and northings in metres.\n\n\n\n\n\n\nTip\n\n\nplot(stations) without st_geometry() draws one small panel per attribute column. Wrap in st_geometry() when you only want the shapes."
   },
   {
     "objectID": "Week1-RSpatial.html#reprojecting",

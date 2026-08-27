@@ -41,10 +41,10 @@ terra::proj_ok()
 
 ## Why R?
 
-- R is an impressive, do-it-all software: loading spatial datasets, to fitting models, analyzing patterns, and creating publication-quality maps and plots.
-- **reproducibility** of data summaries and statistical analyses.
-- **Automation**: automates repetitive or mundane data processing tasks.
-- **Open-source and free**: constant updates contributed by scientists worldwide.
+-   R is an impressive, do-it-all software: loading spatial datasets, to fitting models, analyzing patterns, and creating publication-quality maps and plots.
+-   **reproducibility** of data summaries and statistical analyses.
+-   **Automation**: automates repetitive or mundane data processing tasks.
+-   **Open-source and free**: constant updates contributed by scientists worldwide.
 
 ::: notes
 This introductory lab is a foundation for students who have not used R often, or who want to review the basics of data and spatial data structures. Everything in this deck runs in the browser, so nobody needs a working local install on day one.
@@ -52,14 +52,14 @@ This introductory lab is a foundation for students who have not used R often, or
 
 ## R Packages
 
-- **R packages (libraries)**: bundles of functions, data, and documentation that extend R's capabilities.
-- Spatial packages are catalogued on the CRAN Task View: *Analysis of Spatial Data*.
-  - The two R spatial packages we lean on all semester:
-  - **`sf`**: mostly for vector data (points, lines, polygons)
-  - **`terra`**: mostly for raster data (grids, stacks)
-- Model fitting and post-processing
-  - **`Nimble`** and **`coda`**
-- A few other occasional packages
+-   **R packages (libraries)**: bundles of functions, data, and documentation that extend R's capabilities.
+-   Spatial packages are catalogued on the CRAN Task View: *Analysis of Spatial Data*.
+    -   The two R spatial packages we lean on all semester:
+    -   **`sf`**: mostly for vector data (points, lines, polygons)
+    -   **`terra`**: mostly for raster data (grids, stacks)
+-   Model fitting and post-processing
+    -   **`Nimble`** and **`coda`**
+-   A few other occasional packages
 
 ::: notes
 Note that sf and terra have replaced the older sp and raster packages; sp was retired in 2023 and raster is in maintenance mode only.
@@ -83,17 +83,17 @@ for (x in 1:5) {
 
 ## Getting Help in R
 
-- To view documentation for any loaded function, use `help()` or `?`:
+-   To view documentation for any loaded function, use `help()` or `?`:
 
 ```{r}
 ?runif
 help(runif)
 ```
 
-- `help(package = "sf")` lists every function in a package.
-- `??aggregate` runs a fuzzy search.
-- Online resources are enormous. The **R-sig-geo** mailing list is invaluable for spatial questions, and pasting an error message into a search engine solves most problems in one step.
-- The elephant in the room: GenAI
+-   `help(package = "sf")` lists every function in a package.
+-   `??aggregate` runs a fuzzy search.
+-   Online resources are enormous. The **R-sig-geo** mailing list is invaluable for spatial questions, and pasting an error message into a search engine solves most problems in one step.
+-   The elephant in the room: GenAI
 
 ::: notes
 In R you never have to memorise code. Help pages document the expected inputs (arguments) and the returned value. In r the help page prints as plain text rather than opening a formatted panel.
@@ -103,9 +103,9 @@ In R you never have to memorise code. Help pages document the expected inputs (a
 
 ## Two Data Types
 
-- **Vector** data represent discrete features with coordinates: **points** (nest sites, camera stations), **lines** (streams, roads, GPS tracks), **polygons** (home ranges, park boundaries, watersheds). Handled by **`sf`**, class `sf` / `sfc`.
-- **Raster** data represent a continuous surface as a regular grid of cells: elevation, canopy cover, temperature, predicted density. Handled by **`terra`**, class `SpatRaster`.
-- `terra` also carries its own vector class, `SpatVector`, so raster and vector operations can talk to each other without leaving the package.
+-   **Vector** data represent discrete features with coordinates: **points** (nest sites, camera stations), **lines** (streams, roads, GPS tracks), **polygons** (home ranges, park boundaries, watersheds). Handled by **`sf`**, class `sf` / `sfc`.
+-   **Raster** data represent a continuous surface as a regular grid of cells: elevation, canopy cover, temperature, predicted density. Handled by **`terra`**, class `SpatRaster`.
+-   `terra` also carries its own vector class, `SpatVector`, so raster and vector operations can talk to each other without leaving the package.
 
 ::: {.callout-important title="Coordinate reference systems"}
 A CRS tells R where on Earth your coordinates sit and what the units mean. Layers must share a CRS before you overlay, clip, or measure. Mismatched CRS is the single most common source of silent spatial errors.
@@ -113,7 +113,7 @@ A CRS tells R where on Earth your coordinates sit and what the units mean. Layer
 
 ## Old and New Package Names
 
-| Task              | Use this    | Retired          |
+| Task              | Use this             | Retired                   |
 |-------------------|----------------------|---------------------------|
 | Vector class      | `sf` object          | `sp::SpatialPoints*`      |
 | Read vector file  | `sf::st_read()`      | `rgdal::readOGR()`        |
@@ -184,7 +184,9 @@ crs_info$units             # coordinate units
 
 ```{r}
 plot(sf::st_geometry(stations),
-     pch  = 19, cex = 1.3, col = "#70002E",
+     pch  = 19,
+     cex = 1.3,
+     col = "#70002E",
      axes = TRUE,
      main = "Simulated survey stations (UTM 12N)")
 
@@ -513,14 +515,11 @@ plot(terra::vect(stations),
      col = "#333333")
 ```
 
-
-
 ::: callout-tip
 `vect()` converts an `sf` object to `terra`'s `SpatVector`; `st_as_sf()` converts back. That pair is how you move between the two packages.
 :::
 
-:::{.notes}
-
+::: notes
 Two high ridges rise to roughly 2,200 m and 1,900 m out of a 1,300 m valley floor. Dark points are the survey stations from the previous section.
 :::
 
@@ -1014,10 +1013,10 @@ freq(suitable)                                      #<3>
 
 ## Where to Go Next
 
-- **`sf`** [r-spatial.github.io/sf](https://r-spatial.github.io/sf/) has vignettes covering every `st_*` function used here
-- **`terra`** [rspatial.org/spatial-R](https://rspatial.org/) is the reference for raster workflows
-- ***Geocomputation with R*** (Lovelace, Nowosad, Muenchow): free online, the best single text on modern R spatial analysis
-- **R-sig-geo** mailing list: where hard spatial questions get answered
+-   **`sf`** [r-spatial.github.io/sf](https://r-spatial.github.io/sf/) has vignettes covering every `st_*` function used here
+-   **`terra`** [rspatial.org/spatial-R](https://rspatial.org/) is the reference for raster workflows
+-   ***Geocomputation with R*** (Lovelace, Nowosad, Muenchow): free online, the best single text on modern R spatial analysis
+-   **R-sig-geo** mailing list: where hard spatial questions get answered
 
 ::: notes
 Encourage students to bookmark Geocomputation with R specifically. It was rewritten for sf and terra, so unlike much of what surfaces in a search it does not teach retired packages.
