@@ -22,7 +22,7 @@ Each lesson is a set of slides with live R code. You do not need R or RStudio in
 # Builds the lesson table automatically from every Day*.qmd in this folder.
 # Add a new lesson file, render, and it appears here. Nothing to edit below.
 
-files <- sort(list.files(pattern = "^Day.*\\.qmd$"))
+files <- sort(list.files(pattern = "^Week.*\\.qmd$"))
 
 get_field <- function(lines, key) {
   fences <- which(trimws(lines) == "---")
