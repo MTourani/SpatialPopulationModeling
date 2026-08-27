@@ -1,0 +1,50 @@
+{
+  "index.qmd": {
+    "index.html": "b096a313"
+  },
+  "Day01_2026-09-01_intro.qmd": {
+    "Day01_2026-09-01_intro.html": "49272784"
+  },
+  "Day02_2026-09-8_r-syntax.qmd": {
+    "Day02_2026-09-8_r-syntax.html": "4923d7c6"
+  },
+  "Day03_2026-09-15_visualization.qmd": {
+    "Day03_2026-09-15_visualization.html": "3902746f"
+  },
+  "Day04_2026-09-22_sampling-simulation.qmd": {
+    "Day04_2026-09-22_sampling-simulation.html": "f18ff9b2"
+  },
+  "Day05_2026-09-29_linear-models.qmd": {
+    "Day05_2026-09-29_linear-models.html": "1fbe0ff0"
+  },
+  "Day06_2026-10-06_glm-bayesian-intro.qmd": {
+    "Day06_2026-10-06_glm-bayesian-intro.html": "e592e621"
+  },
+  "Day07_2026-10-13_model-comparison.qmd": {
+    "Day07_2026-10-13_model-comparison.html": "106c4597"
+  },
+  "Day09_2026-10-27_predictions-ggplot.qmd": {
+    "Day09_2026-10-27_predictions-ggplot.html": "2a634fa0"
+  },
+  "Day10_2026-11-03_power-analysis.qmd": {
+    "Day10_2026-11-03_power-analysis.html": "dbf904cb"
+  },
+  "Day11_2026-11-10_model-assumptions.qmd": {
+    "Day11_2026-11-10_model-assumptions.html": "358d88c4"
+  },
+  "Day12_2026-11-17_mixed-effects.qmd": {
+    "Day12_2026-11-17_mixed-effects.html": "03b76083"
+  },
+  "Day13_2026-12-01_occupancy-models.qmd": {
+    "Day13_2026-12-01_occupancy-models.html": "5e97b7e7"
+  },
+  "Week1-RSpatial.qmd": {
+    "Week1-RSpatial.html": "f0b4dad9"
+  },
+  "Week1-GettingStartedwR.qmd": {
+    "Week1-GettingStartedwR.html": "81accac5"
+  },
+  "Week1-introduction.qmd": {
+    "Week1-introduction.html": "390c24e2"
+  }
+}

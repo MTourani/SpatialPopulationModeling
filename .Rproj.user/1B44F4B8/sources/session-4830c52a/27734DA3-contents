@@ -1,0 +1,228 @@
+/*-- scss:defaults --*/
+
+// WILD 541 Reveal.js Theme
+// Cover: narrow blue horizontal rule; body: consistent dark text on white
+// v2 — adds sizing rules for quarto-live plot output and WCAG 2.1 AA fixes
+
+/* ── Palette ─────────────────────────────────────────── */
+$primary:      #1D3F8A;   /* UM blue      — 9.86:1 on white  */
+$accent:       #2563EB;   /* bright blue  — 5.17:1 on white  */
+$text-dark:    #1A1A2E;   /* near-black – all body text      */
+$muted:        #5B5B7A;   /* muted text   — 6.52:1 on white  */
+$bg-slide:     #FFFFFF;
+$bg-code:      #F0F4FF;   /* very light blue-white           */
+$rule-color:   #2563EB;
+$rule-height:  4px;
+
+/*-- scss:rules --*/
+
+/* ── Base ────────────────────────────────────────────── */
+.reveal {
+  font-family: "Calibri", "Segoe UI", Arial, sans-serif;
+  font-size: 28px;
+  color: $text-dark;
+  background-color: $bg-slide;
+}
+
+.reveal h1, .reveal h2, .reveal h3,
+.reveal h4, .reveal h5, .reveal h6 {
+  font-family: "Cambria", "Georgia", serif;
+  color: $text-dark;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-transform: none;
+}
+
+.reveal h1 { font-size: 1.9em; }
+.reveal h2 { font-size: 1.4em; }
+.reveal h3 { font-size: 1.15em; }
+
+/* ── Cover / Title slide ─────────────────────────────── */
+.reveal .title-slide .title,
+#title-slide .title {
+  color: $text-dark;
+  font-size: 2.0em;
+  margin-bottom: 0.15em;
+  padding-bottom: 0.2em;
+  border-bottom: $rule-height solid $rule-color;
+  display: inline-block;
+  max-width: 90%;
+}
+
+.reveal .title-slide .subtitle,
+.reveal .title-slide .author,
+.reveal .title-slide .date,
+#title-slide .subtitle,
+#title-slide .author,
+#title-slide .date {
+  color: $text-dark;
+  font-family: "Calibri", "Segoe UI", Arial, sans-serif;
+  font-weight: 400;
+}
+
+.reveal .title-slide .subtitle,
+#title-slide .subtitle {
+  font-size: 1.1em;
+  color: #3A3A5C;
+  margin-top: 0.5em;
+}
+
+.reveal .title-slide .author,
+#title-slide .author { font-size: 0.95em; margin-top: 0.8em; }
+
+.reveal .title-slide .date,
+#title-slide .date { font-size: 0.85em; color: #555577; }
+
+/* ── Slide numbers ───────────────────────────────────── */
+.reveal .slide-number {
+  color: $accent;
+  font-size: 0.7em;
+}
+
+/* ── Code blocks – bright background, NOT dark ──────── */
+.reveal pre {
+  background-color: $bg-code !important;
+  border-left: 4px solid $accent;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  font-size: 0.78em;
+  padding: 0.6em 0.9em;
+  margin: 0.4em 0;
+}
+
+.reveal pre code {
+  background-color: transparent !important;
+  color: #1A1A2E !important;
+  font-family: "Consolas", "Courier New", monospace;
+}
+
+.reveal code {
+  background-color: #E8EEFF;
+  color: $primary;
+  border-radius: 3px;
+  padding: 0.05em 0.3em;
+  font-size: 0.88em;
+}
+
+/* ── quarto-live interactive cells ──────────────────── */
+.reveal .live-editor,
+.reveal .quarto-live-editor,
+.reveal .cm-editor {
+  background-color: $bg-code !important;
+  border: 1.5px solid $accent;
+  border-radius: 6px;
+  font-size: 0.8em;
+}
+
+/* Caption above each live cell */
+.reveal .exercise-cell-title,
+.reveal .quarto-live-caption {
+  font-size: 0.75em;
+  font-weight: 600;
+  color: $primary;
+}
+
+/* Run / Start Over buttons */
+.reveal .quarto-live-run-button,
+.reveal .btn-primary {
+  background-color: $accent;
+  border-color: $accent;
+  color: #fff;
+  font-size: 0.8em;
+  border-radius: 4px;
+}
+
+/* Visible keyboard focus — WCAG 2.4.7 */
+.reveal button:focus-visible,
+.reveal a:focus-visible,
+.reveal .cm-editor.cm-focused {
+  outline: 3px solid $primary !important;
+  outline-offset: 2px;
+}
+
+/* Output area */
+.reveal .quarto-live-output,
+.reveal .exercise-cell-output,
+.reveal .cell-output {
+  background-color: #FAFBFF;
+  border-left: 3px solid #93C5FD;
+  border-radius: 0 6px 6px 0;
+  font-size: 0.8em;
+  padding: 0.4em 0.7em;
+  margin-top: 0.2em;
+  color: $text-dark;
+}
+
+/* ─────────────────────────────────────────────────────
+   FIGURE SIZING — the important bit for slides.
+   quarto-live draws plots onto an HTML <canvas>, not an <img>,
+   so both element types need constraining or a 7x4in plot will
+   render at native size and overflow a 1280x720 slide.
+   ───────────────────────────────────────────────────── */
+.reveal .slides section img,
+.reveal .cell-output img,
+.reveal .quarto-live-output img,
+.reveal .exercise-cell-output img,
+.reveal .quarto-live-output canvas,
+.reveal .exercise-cell-output canvas,
+.reveal .cell-output canvas,
+.reveal canvas.webr-canvas {
+  display: block;
+  margin: 0.25em auto;
+  max-width: 100%;
+  max-height: 42vh;      /* ~300px on a 720px slide */
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  image-rendering: auto;
+}
+
+/* On text-light slides, let the plot breathe a little more */
+.reveal .slides section.plot-large .quarto-live-output canvas,
+.reveal .slides section.plot-large .exercise-cell-output canvas {
+  max-height: 56vh;
+}
+
+/* Long slides marked {.scrollable} */
+.reveal .slides section.scrollable {
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+/* ── Callout boxes (practice / note) ────────────────── */
+.reveal .callout {
+  border-radius: 6px;
+  font-size: 0.9em;
+}
+
+.reveal .callout-practice {
+  background-color: #EEF7FF;
+  border-left: 4px solid $accent;
+}
+
+/* ── Links ───────────────────────────────────────────── */
+.reveal a {
+  color: $accent;
+  text-decoration: underline;   /* never colour alone — WCAG 1.4.1 */
+}
+
+/* ── Footer ──────────────────────────────────────────── */
+/* was #8888AA (3.41:1 — fails AA for small text); now 6.52:1 */
+.reveal .footer {
+  font-size: 0.65em;
+  color: $muted;
+}
+
+/* ── Outline / numbered lists ────────────────────────── */
+.reveal ol > li::marker {
+  color: $accent;
+  font-weight: 700;
+}
+
+.reveal ul > li::before { color: $accent; }
+
+/* ── Highlight text colour (search) ─────────────────── */
+.reveal mark {
+  background: #DBEAFE;
+  color: $text-dark;
+}

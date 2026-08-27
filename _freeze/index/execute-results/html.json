@@ -1,0 +1,15 @@
+{
+  "hash": "14dd0c7b3aa056387d6e13c425d6dc2b",
+  "result": {
+    "engine": "knitr",
+    "markdown": "---\ntitle: \"WILD 591 — Spatial Population Modeling\"\nsubtitle: \"\"\nformat:\n  html:\n    toc: false\n    theme: cosmo\n    css: styles.css\nlang: en-US\n---\n\nEach lesson is a set of slides with live R code. You do not need R or RStudio installed to try the examples. Edit any code block and press **Run Code** to see the results. That said, I recommend you to install R and RStudio and follow the material on your computer.\n\n## Lessons\n\n_No lessons published yet._\n\n::: callout-tip\n## Navigating the slides\n\nUse the arrow keys or the on-screen controls to move between slides.\n:::\n\n## Getting help\n\nIf a code block did not run, try reloading the page since the browser occasionally drops the R engine after being idle for long.\n",
+    "supporting": [],
+    "filters": [
+      "rmarkdown/pagebreak.lua"
+    ],
+    "includes": {},
+    "engineDependencies": {},
+    "preserve": {},
+    "postProcess": true
+  }
+}

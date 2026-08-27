@@ -1,0 +1,786 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "WILD 591 — Spatial Population Modeling",
+    "section": "",
+    "text": "Each lesson is a set of slides with live R code. You do not need R or RStudio installed to try the examples. Edit any code block and press Run Code to see the results. That said, I recommend you to install R and RStudio and follow the material on your computer."
+  },
+  {
+    "objectID": "index.html#lessons",
+    "href": "index.html#lessons",
+    "title": "WILD 591 — Spatial Population Modeling",
+    "section": "Lessons",
+    "text": "Lessons\nNo lessons published yet.\n\n\n\n\n\n\nTipNavigating the slides\n\n\n\nUse the arrow keys or the on-screen controls to move between slides."
+  },
+  {
+    "objectID": "index.html#getting-help",
+    "href": "index.html#getting-help",
+    "title": "WILD 591 — Spatial Population Modeling",
+    "section": "Getting help",
+    "text": "Getting help\nIf a code block did not run, try reloading the page since the browser occasionally drops the R engine after being idle for long."
+  },
+  {
+    "objectID": "Week1-RSpatial.html#why-r",
+    "href": "Week1-RSpatial.html#why-r",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Why R?",
+    "text": "Why R?\n\nR is an impressive, do-it-all software: loading spatial datasets, to fitting models, analyzing patterns, and creating publication-quality maps and plots.\nreproducibility of data summaries and statistical analyses.\nAutomation: automates repetitive or mundane data processing tasks.\nOpen-source and free: constant updates contributed by scientists worldwide.\n\n\nThis introductory lab is a foundation for students who have not used R often, or who want to review the basics of data and spatial data structures. Everything in this deck runs in the browser, so nobody needs a working local install on day one."
+  },
+  {
+    "objectID": "Week1-RSpatial.html#r-packages",
+    "href": "Week1-RSpatial.html#r-packages",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "R Packages",
+    "text": "R Packages\n\nR packages (libraries): bundles of functions, data, and documentation that extend R’s capabilities.\nSpatial packages are catalogued on the CRAN Task View: Analysis of Spatial Data.\n\nThe two R spatial packages we lean on all semester:\nsf: mostly for vector data (points, lines, polygons)\nterra: mostly for raster data (grids, stacks)\n\nModel fitting and post-processing\n\nNimble and coda\n\nA few other occasional packages\n\n\nNote that sf and terra have replaced the older sp and raster packages; sp was retired in 2023 and raster is in maintenance mode only."
+  },
+  {
+    "objectID": "Week1-RSpatial.html#first-live-cell",
+    "href": "Week1-RSpatial.html#first-live-cell",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "First Live Cell",
+    "text": "First Live Cell\nIf you see the numbers 1 through 5 squared, everything is working."
+  },
+  {
+    "objectID": "Week1-RSpatial.html#getting-help-in-r",
+    "href": "Week1-RSpatial.html#getting-help-in-r",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Getting Help in R",
+    "text": "Getting Help in R\n\nTo view documentation for any loaded function, use help() or ?:\n\n\n\n\n\n\n\n\n\n\nhelp(package = \"sf\") lists every function in a package.\n??aggregate runs a fuzzy search.\nOnline resources are enormous. The R-sig-geo mailing list is invaluable for spatial questions, and pasting an error message into a search engine solves most problems in one step.\nThe elephant in the room: GenAI\n\n\nIn R you never have to memorise code. Help pages document the expected inputs (arguments) and the returned value. In webR the help page prints as plain text rather than opening a formatted panel."
+  },
+  {
+    "objectID": "Week1-RSpatial.html#two-data-types",
+    "href": "Week1-RSpatial.html#two-data-types",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Two Data Types",
+    "text": "Two Data Types\n\nVector data represent discrete features with coordinates: points (nest sites, camera stations), lines (streams, roads, GPS tracks), polygons (home ranges, park boundaries, watersheds). Handled by sf, class sf / sfc.\nRaster data represent a continuous surface as a regular grid of cells: elevation, canopy cover, temperature, predicted density. Handled by terra, class SpatRaster.\nterra also carries its own vector class, SpatVector, so raster and vector operations can talk to each other without leaving the package.\n\n\n\n\n\n\n\n\nCoordinate reference systems\n\n\nA CRS tells R where on Earth your coordinates sit and what the units mean. Layers must share a CRS before you overlay, clip, or measure. Mismatched CRS is the single most common source of silent spatial errors."
+  },
+  {
+    "objectID": "Week1-RSpatial.html#old-and-new-package-names",
+    "href": "Week1-RSpatial.html#old-and-new-package-names",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Old and New Package Names",
+    "text": "Old and New Package Names\n\n\n\nTask\nModern (use this)\nLegacy (retired)\n\n\n\n\nVector class\nsf object\nsp::SpatialPoints*\n\n\nRead vector file\nsf::st_read()\nrgdal::readOGR()\n\n\nReproject vector\nsf::st_transform()\nsp::spTransform()\n\n\nRaster class\nterra::SpatRaster\nraster::RasterLayer\n\n\nRead raster file\nterra::rast()\nraster::raster()\n\n\nReproject raster\nterra::project()\nraster::projectRaster()\n\n\nExtract at points\nterra::extract()\nraster::extract()\n\n\n\n\nsp, rgdal, rgeos, and maptools were all retired in October 2023. Any tutorial that leads with readOGR() predates that and will not run on a current install."
+  },
+  {
+    "objectID": "Week1-RSpatial.html#our-simulated-study-area",
+    "href": "Week1-RSpatial.html#our-simulated-study-area",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Our Simulated Study Area",
+    "text": "Our Simulated Study Area\nA hypothetical 12 × 12 km study area in UTM zone 12N (EPSG:32612), the projection used across western Montana. Coordinates are in metres, which means distances and areas come back in sensible units.\n\n\n\n\n\n\n\n\nLayer\nType\nBuilt with\n\n\n\n\nSurvey stations\nPoints\nsf::st_as_sf()\n\n\nWilderness unit\nPolygon\nsf::st_polygon()\n\n\nLost Creek\nLine\nsf::st_linestring()\n\n\nElevation, canopy, distance to water\nRaster stack\nterra::rast()"
+  },
+  {
+    "objectID": "Week1-RSpatial.html#building-points-from-scratch",
+    "href": "Week1-RSpatial.html#building-points-from-scratch",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Building Points from Scratch",
+    "text": "Building Points from Scratch\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nNote\n\n\nst_as_sf() moves the two coordinate columns into a geometry column and leaves every other column as an ordinary attribute. An sf object is a data frame — nrow(), $, and subset() all still work."
+  },
+  {
+    "objectID": "Week1-RSpatial.html#inspecting-geometry-and-crs",
+    "href": "Week1-RSpatial.html#inspecting-geometry-and-crs",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Inspecting Geometry and CRS",
+    "text": "Inspecting Geometry and CRS"
+  },
+  {
+    "objectID": "Week1-RSpatial.html#plotting-points",
+    "href": "Week1-RSpatial.html#plotting-points",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Plotting Points",
+    "text": "Plotting Points\n\n\n\n\n\n\n\n\nTwenty-five stations scattered across the 12 × 12 km study area. Axis values are UTM eastings and northings in metres.\n\n\n\n\n\n\nTip\n\n\nplot(stations) without st_geometry() draws one small panel per attribute column. Wrap in st_geometry() when you only want the shapes."
+  },
+  {
+    "objectID": "Week1-RSpatial.html#reprojecting",
+    "href": "Week1-RSpatial.html#reprojecting",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Reprojecting",
+    "text": "Reprojecting\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nImportant\n\n\nst_transform() reprojects — it converts the coordinates. st_crs(x) &lt;- 4326 only relabels the CRS without moving anything, which is how layers end up in the Gulf of Guinea. Use the assignment form only when the CRS was recorded wrongly in the first place."
+  },
+  {
+    "objectID": "Week1-RSpatial.html#building-a-polygon",
+    "href": "Week1-RSpatial.html#building-a-polygon",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Building a Polygon",
+    "text": "Building a Polygon\n\n\n\n\n\n\n\n\nThe shaded polygon covers roughly 50 km². Maroon dots are the survey stations; some fall inside and some outside."
+  },
+  {
+    "objectID": "Week1-RSpatial.html#spatial-queries",
+    "href": "Week1-RSpatial.html#spatial-queries",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Spatial Queries",
+    "text": "Spatial Queries\nWhich stations fall inside the wilderness unit?\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nNote\n\n\nst_intersects() returns a list of matches for each feature. lengths(...) &gt; 0 converts that to a plain logical vector, which is the safest way to subset. st_within(), st_contains(), and st_touches() follow the same pattern."
+  },
+  {
+    "objectID": "Week1-RSpatial.html#distances-between-points",
+    "href": "Week1-RSpatial.html#distances-between-points",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Distances Between Points",
+    "text": "Distances Between Points\n\n\n\n\n\n\n\n\nMost stations sit within about 1–2 km of their closest neighbour. If you were designing a real array you would compare this against the species’ home-range diameter to judge spatial independence."
+  },
+  {
+    "objectID": "Week1-RSpatial.html#buffers-union-and-hull",
+    "href": "Week1-RSpatial.html#buffers-union-and-hull",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Buffers, Union, and Hull",
+    "text": "Buffers, Union, and Hull\n\n\n\n\n\n\n\n\nThe dashed green outline is the convex hull of the array; the pale blue shape is the area within 1 km of any station. The ratio of the two is a rough measure of how completely the array covers its own footprint."
+  },
+  {
+    "objectID": "Week1-RSpatial.html#lines-and-distance-to-water",
+    "href": "Week1-RSpatial.html#lines-and-distance-to-water",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Lines and Distance to Water",
+    "text": "Lines and Distance to Water\n\n\n\n\n\n\n\n\nThe blue line is the simulated stream. Dark points sit closest to water, light points farthest, and the legend spells out the actual break points so the map does not depend on colour alone. dist_stream is now a column you can give to a model as input."
+  },
+  {
+    "objectID": "Week1-RSpatial.html#reading-and-writing-vector-files",
+    "href": "Week1-RSpatial.html#reading-and-writing-vector-files",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Reading and Writing Vector Files",
+    "text": "Reading and Writing Vector Files"
+  },
+  {
+    "objectID": "Week1-RSpatial.html#your-turn-vector-operations",
+    "href": "Week1-RSpatial.html#your-turn-vector-operations",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Your Turn: Vector Operations",
+    "text": "Your Turn: Vector Operations\n\n\n\n\n\n\n\nExercise 6\n\n\nRun the cell, then change the buffer width. How wide does the corridor have to be before half the stations fall inside?\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nHint\n\n\nThe CRS uses metres, so dist is given in metres. A 500 m buffer is dist = 500.\n\n\n\n\n\n\n\n\n\n\n\nSolution\n\n\n1corridor &lt;- sf::st_buffer(stream, dist = 500)\nin_corridor &lt;- lengths(sf::st_intersects(stations, corridor)) &gt; 0\n2sum(in_corridor)\n3round(as.numeric(sf::st_area(corridor)) / 1e6, 2)\n\n1\n\nBuffering a line produces a polygon 500 m either side of it.\n\n2\n\nRoughly a quarter of the stations should land inside.\n\n3\n\nThe corridor covers about 16 km² — useful if you need a sampled-area denominator."
+  },
+  {
+    "objectID": "Week1-RSpatial.html#setup-for-this-section",
+    "href": "Week1-RSpatial.html#setup-for-this-section",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Setup for This Section",
+    "text": "Setup for This Section\nThe raster examples reuse the three vector layers built in the previous section. If you jumped straight here, or refreshed the page, run this cell first to recreate them.\n\nlibrary(sf)\nset.seed(591)\n\nn &lt;- 25\nstations &lt;- sf::st_as_sf(\n  data.frame(site_id  = sprintf(\"S%02d\", 1:n),\n             easting  = runif(n, 280500, 291500),\n             northing = runif(n, 5180500, 5191500),\n             effort   = sample(20:60, n, replace = TRUE)),\n  coords = c(\"easting\", \"northing\"), crs = 32612)\n\nreserve &lt;- st_sf(name = \"Wilderness Unit\",\n  geometry = st_sfc(st_polygon(list(matrix(\n    c(282000, 5182000, 289000, 5182500, 290000, 5188000,\n      283500, 5190000, 282000, 5182000), ncol = 2, byrow = TRUE))), crs = 32612))\n\nstream &lt;- sf::st_sf(name = \"Lost Creek\",\n                    geometry = sf::st_sfc(sf::st_linestring(matrix(\n                      c(280500, 5183000, 284000, 5185500,\n                        287500, 5186500, 291500, 5190000), ncol = 2, byrow = TRUE)), crs = 32612))\n\nc(stations = nrow(stations), reserve = nrow(reserve), stream = nrow(stream))"
+  },
+  {
+    "objectID": "Week1-RSpatial.html#simulating-an-elevation-surface",
+    "href": "Week1-RSpatial.html#simulating-an-elevation-surface",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Simulating an Elevation Surface",
+    "text": "Simulating an Elevation Surface\n\nlibrary(terra)\n\nset.seed(591)\n\nelev &lt;- terra::rast(nrows = 60, \n                    ncols = 60,\n                    xmin = 280000,\n                    xmax = 292000,\n                    ymin = 5180000,\n                    ymax = 5192000,\n                    crs  = \"EPSG:32612\")\n\n# Two Gaussian ridges plus noise\nxy &lt;- terra::xyFromCell(elev, 1:ncell(elev))\nd1 &lt;- sqrt((xy[, 1] - 284000)^2 + (xy[, 2] - 5189000)^2)\nd2 &lt;- sqrt((xy[, 1] - 289500)^2 + (xy[, 2] - 5183000)^2)\n\nvalues(elev) &lt;- 1300 +\n  900 * exp(-(d1 / 3200)^2) +\n  600 * exp(-(d2 / 2600)^2) +\n  rnorm(ncell(elev), 0, 30)\n\nnames(elev) &lt;- \"elev_m\"\nelev\n\n\n\n\n\n\n\nNote\n\n\nrast() defines the grid geometry, i.e., extent, resolution, and CRS before any values exist. values()&lt;- fills the cells row by row from the top-left. res(elev) confirms each cell is 200 × 200 m."
+  },
+  {
+    "objectID": "Week1-RSpatial.html#mapping-the-raster",
+    "href": "Week1-RSpatial.html#mapping-the-raster",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Mapping the Raster",
+    "text": "Mapping the Raster\n\nplot(elev, \n     col = terrain.colors(50),\n     main = \"Simulated elevation (m)\",\n     plg = list(title = \"m\"))\n\n# Overlay the sf points by converting them to a SpatVector\nplot(terra::vect(stations),\n     add = TRUE, \n     pch = 19, \n     cex = 1.1,\n     col = \"#333333\")\n\n\n\n\n\n\n\nTip\n\n\nvect() converts an sf object to terra’s SpatVector; st_as_sf() converts back. That pair is how you move between the two packages.\n\n\n\n\nTwo high ridges rise to roughly 2,200 m and 1,900 m out of a 1,300 m valley floor. Dark points are the survey stations from the previous section."
+  },
+  {
+    "objectID": "Week1-RSpatial.html#summarising-a-raster",
+    "href": "Week1-RSpatial.html#summarising-a-raster",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Summarising a Raster",
+    "text": "Summarising a Raster\n\nterra::res(elev)             # cell size, metres\nterra::ncell(elev)           # number of cells\nterra::ext(elev)             # extent\n\nterra::global(elev, fun = \"mean\", na.rm = TRUE)\nterra::global(elev, fun = \"range\", na.rm = TRUE)\n\nhist(elev,\n     col = \"#DFD1A7\", \n     border = \"#333333\",\n     main = \"Distribution of cell elevations\",\n     xlab = \"Elevation (m)\")\n\nThe histogram is right-skewed: most of the study area is valley floor, with progressively fewer cells at higher elevations."
+  },
+  {
+    "objectID": "Week1-RSpatial.html#map-algebra-and-a-raster-stack",
+    "href": "Week1-RSpatial.html#map-algebra-and-a-raster-stack",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Map Algebra and a Raster Stack",
+    "text": "Map Algebra and a Raster Stack\nRasters behave like numbers — you can add, multiply, and threshold them directly.\n\nset.seed(591)\n\nnoise &lt;- terra::rast(elev)                     # empty raster, same grid\nvalues(noise) &lt;- rnorm(terra::ncell(elev), 0, 6)\n\n# Canopy declines with elevation, then is clipped to 0-100%\ncanopy &lt;- terra::clamp(95 - 0.045 * (elev - 1300) + noise, 0, 100)\nnames(canopy) &lt;- \"canopy_pct\"\n\n# Distance from every cell to the stream\nstream_v &lt;- terra::vect(stream)\ndist_str &lt;- terra::distance(terra::rast(elev), stream_v)\nnames(dist_str) &lt;- \"dist_stream_m\"\n\ncovs &lt;- c(elev, canopy, dist_str)\ncovs\n\nplot(covs, col = hcl.colors(50, \"Viridis\"), nc = 3)\n\nThree panels: elevation, canopy cover, and distance to the stream. All three share the same grid, so they can be stacked and used together."
+  },
+  {
+    "objectID": "Week1-RSpatial.html#neighbourhoods-and-terrain",
+    "href": "Week1-RSpatial.html#neighbourhoods-and-terrain",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Neighbourhoods and Terrain",
+    "text": "Neighbourhoods and Terrain\n\n# 5 x 5 moving-window mean removes the simulated noise\nelev_smooth &lt;- terra::focal(elev, w = matrix(1, 5, 5), fun = mean, na.rm = TRUE)\nnames(elev_smooth) &lt;- \"elev_smooth\"\n\nslope &lt;- terra::terrain(elev_smooth, v = \"slope\", unit = \"degrees\")\n\npar(mfrow = c(1, 2))\nplot(elev_smooth, col = terrain.colors(50), main = \"Smoothed elevation (m)\")\nplot(slope, col = hcl.colors(50, \"Inferno\"), main = \"Slope (degrees)\")\npar(mfrow = c(1, 1))\n\nSmoothing removes the pixel-level noise so terrain() returns a realistic slope surface. Steepest values ring the flanks of each ridge; the summits and the valley floor are flat.\n\n\n\n\n\n\nNote\n\n\nfocal() is the workhorse for scale questions: change the window size and you change the grain at which a covariate is measured, which often matters more to a habitat model than the covariate itself."
+  },
+  {
+    "objectID": "Week1-RSpatial.html#reclassifying-into-categories",
+    "href": "Week1-RSpatial.html#reclassifying-into-categories",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Reclassifying into Categories",
+    "text": "Reclassifying into Categories\n\nrcl &lt;- matrix(c(   0, 1500, 1,\n                1500, 1900, 2,\n                1900, 5000, 3),\n              ncol = 3, byrow = TRUE)\n\nbands &lt;- terra::classify(elev, rcl, include.lowest = TRUE)\nlevels(bands) &lt;- data.frame(id   = 1:3,\n                            band = c(\"Valley (&lt;1500 m)\",\n                                     \"Montane (1500-1900 m)\",\n                                     \"Subalpine (&gt;1900 m)\"))\n\nterra::freq(bands)\n\nplot(bands,\n     col = c(\"#EFE8D4\", \"#DFD1A7\", \"#70002E\"),\n     main = \"Elevation bands\")\n\nfreq() reports the cell count in each band, and each cell is 200 × 200 m, so multiplying by 0.04 converts directly to km²."
+  },
+  {
+    "objectID": "Week1-RSpatial.html#cropping-masking-and-resampling",
+    "href": "Week1-RSpatial.html#cropping-masking-and-resampling",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Cropping, Masking, and Resampling",
+    "text": "Cropping, Masking, and Resampling\n\nreserve_v &lt;- terra::vect(reserve)\n\nelev_res &lt;- terra::mask(terra::crop(elev, reserve_v), reserve_v)\n\n# Coarsen from 200 m to 800 m cells\nelev_coarse &lt;- terra::aggregate(elev, fact = 4, fun = mean)\n\nres(elev)\nres(elev_coarse)\n\npar(mfrow = c(1, 2))\nplot(elev_res, col = terrain.colors(50), main = \"Clipped to wilderness unit\")\nplot(terra::vect(reserve), add = TRUE, border = \"#1D3C34\", lwd = 2)\nplot(elev_coarse, col = terrain.colors(50), main = \"Aggregated to 800 m cells\")\npar(mfrow = c(1, 1))\n\ncrop() cuts the extent down to the polygon’s bounding box; mask() then sets everything outside the polygon itself to NA. You almost always want both."
+  },
+  {
+    "objectID": "Week1-RSpatial.html#reprojecting-a-raster",
+    "href": "Week1-RSpatial.html#reprojecting-a-raster",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Reprojecting a Raster",
+    "text": "Reprojecting a Raster\n\nelev_ll &lt;- terra::project(elev, \"EPSG:4326\")\n\nterra::crs(elev_ll, describe = TRUE)$name\nround(as.vector(terra::ext(elev_ll)), 4)\nround(terra::res(elev_ll), 6)          # now in degrees, not metres\n\nplot(elev_ll,\n     col = terrain.colors(50),\n     main = \"Elevation in longitude and latitude\")\n\n\n\n\n\n\n\nImportant\n\n\nReprojecting a raster resamples it: cell values are interpolated onto a new grid, so the result is not identical to the original. Reproject vectors when you can and rasters only when you must, and use method = \"near\" for categorical rasters so classes are not averaged into nonsense."
+  },
+  {
+    "objectID": "Week1-RSpatial.html#extracting-raster-values-at-points",
+    "href": "Week1-RSpatial.html#extracting-raster-values-at-points",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Extracting Raster Values at Points",
+    "text": "Extracting Raster Values at Points\n\nstation_covs &lt;- terra::extract(covs, terra::vect(stations), ID = FALSE)\n\nsite_data &lt;- cbind(sf::st_drop_geometry(stations)[\"site_id\"], station_covs)\nhead(site_data)\n\n# Covariates are correlated - always check before modelling\nround(cor(site_data[, c(\"elev_m\", \"canopy_pct\", \"dist_stream_m\")]), 2)\n\npairs(site_data[, c(\"elev_m\", \"canopy_pct\", \"dist_stream_m\")],\n      pch = 19,\n      col = \"#70002E\")\n\nElevation and canopy cover are strongly negatively correlated by construction, which is exactly the collinearity you would flag before fitting a model with both."
+  },
+  {
+    "objectID": "Week1-RSpatial.html#writing-and-reading-rasters",
+    "href": "Week1-RSpatial.html#writing-and-reading-rasters",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Writing and Reading Rasters",
+    "text": "Writing and Reading Rasters\n\nterra::writeRaster(elev, \"elev.tif\", overwrite = TRUE)\nlist.files(pattern = \"tif\")\n\nelev2 &lt;- terra::rast(\"elev.tif\")\nelev2\n\nall.equal(terra::global(elev, \"mean\")[1, 1], terra::global(elev2, \"mean\")[1, 1])\n\n\n\n\n\n\n\nNote\n\n\nGeoTIFF stores the values, the grid, and the CRS in one file. For a multi-layer stack, writeRaster() writes all layers as bands. That is a good reason to name them first."
+  },
+  {
+    "objectID": "Week1-RSpatial.html#your-turn-raster-analysis",
+    "href": "Week1-RSpatial.html#your-turn-raster-analysis",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Your Turn: Raster Analysis",
+    "text": "Your Turn: Raster Analysis\n\n\n\n\n\n\n\nExercise 7\n\n\nThis mask keeps cells below 1,800 m and above 40% canopy cover. Run it, then change either threshold, or swap & for |, and watch the proportion change.\n\n\n\n\n\nlibrary(terra)\nset.seed(591)\nelev &lt;- terra::rast(nrows = 60,\n                    ncols = 60,\n                    xmin = 280000,\n                    xmax = 292000,\n                    ymin = 5180000,\n                    ymax = 5192000, \n                    crs = \"EPSG:32612\")\nxy &lt;- terra::xyFromCell(elev, 1 : terra::ncell(elev))\nd1 &lt;- sqrt((xy[, 1] - 284000)^2 + (xy[, 2] - 5189000)^2)\nd2 &lt;- sqrt((xy[, 1] - 289500)^2 + (xy[, 2] - 5183000)^2)\nvalues(elev) &lt;- 1300 + 900 * exp(-(d1 / 3200)^2) +\n  600 * exp(-(d2 / 2600)^2) + rnorm(terra::ncell(elev), 0, 30)\nnames(elev) &lt;- \"elev_m\"\nnoise &lt;- terra::rast(elev); terra::values(noise) &lt;- rnorm(terra::ncell(elev), 0, 6)\ncanopy &lt;- terra::clamp(95 - 0.045 * (elev - 1300) + noise, 0, 100)\nnames(canopy) &lt;- \"canopy_pct\"\n\n# Logical rasters can be combined with & and |\nsuitable &lt;- (elev &lt; 1800) & (canopy &gt; 40)\nnames(suitable) &lt;- \"suitable\"\n\n# Proportion of cells that qualify\nglobal(suitable, fun = \"mean\", na.rm = TRUE)\n\nplot(suitable, col = c(\"#EFE8D4\", \"#1D3C34\"), main = \"Suitable habitat (green)\")\n\n\n\n\n\n\n\n\nHint\n\n\nCanopy cover is stored as a percentage from 0 to 100, so “more than 40%” is canopy &gt; 40. A logical raster holds 0s and 1s, so its mean is the proportion of TRUE cells.\n\n\n\n\n\n\n\n\n\n\n\nSolution\n\n\n1suitable &lt;- (elev &lt; 1800) & (canopy &gt; 40)\nnames(suitable) &lt;- \"suitable\"\n\n2terra::global(suitable, fun = \"mean\", na.rm = TRUE)\n3freq(suitable)\n\n1\n\n& combines them cell by cell.\n\n2\n\nThe mean of a 0/1 raster is the proportion of cells that qualify.\n\n3\n\nfreq() gives the raw cell counts. Multiply by 0.04 for km², since cells are 200 × 200 m."
+  },
+  {
+    "objectID": "Week1-RSpatial.html#practice-on-your-own",
+    "href": "Week1-RSpatial.html#practice-on-your-own",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Practice On Your Own",
+    "text": "Practice On Your Own\n\n\n\n\n\n\n\nPractice\n\n\n\nChange set.seed() in the camera-trap simulation and rerun the summaries. Which conclusions hold and which were noise?\nLoad one of your own CSV files locally in RStudio. Inspect its dimensions, check the class of every column, and tally observations with table().\nTurn your own coordinates into an sf object, set the correct CRS, and map them.\nTake a real elevation raster for your study area, extract values at your sites, and check for collinearity with pairs().\nSimulate a distribution that matches one of your real variables, and overlay the simulated density on your empirical histogram. Which theoretical distribution fits?"
+  },
+  {
+    "objectID": "Week1-RSpatial.html#where-to-go-next",
+    "href": "Week1-RSpatial.html#where-to-go-next",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Where to Go Next",
+    "text": "Where to Go Next\n\nsf r-spatial.github.io/sf has vignettes covering every st_* function used here\nterra rspatial.org/spatial-R is the reference for raster workflows\nGeocomputation with R (Lovelace, Nowosad, Muenchow): free online, the best single text on modern R spatial analysis\nR-sig-geo mailing list: where hard spatial questions get answered\n\n\nEncourage students to bookmark Geocomputation with R specifically. It was rewritten for sf and terra, so unlike much of what surfaces in a search it does not teach retired packages."
+  },
+  {
+    "objectID": "Week1-introduction.html",
+    "href": "Week1-introduction.html",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "",
+    "text": "Hello and Welcome to Spatial Pop Modeling. My name is Mahdie Tournai, an assistant prof of Q Ecol in the WBIO program, happy to see you this semester."
+  },
+  {
+    "objectID": "Week1-introduction.html#roadmap-for-today",
+    "href": "Week1-introduction.html#roadmap-for-today",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Roadmap for today",
+    "text": "Roadmap for today\n\nThe role of space in ecology and conservation\nTrajectory of spatial modeling frameworks\nThe shape of the rest of the semester\n\n\nThis might be the only lecture in the course with no real analysis in it. so I hope the conceptual density doesn’t feel like busywork.\nAsk up front: “How many of you have data with xy coordinates?” Almost every hand goes up. Why do you think your data includes that information?\nSpace is not just a passive background; it is an active player that shapes interactions, dispersal, and evolutionary trajectories.\nThis lesson is a gentle introduction to the role of space and trajectory of incorporating space into ecology."
+  },
+  {
+    "objectID": "Week1-introduction.html#hook-setup",
+    "href": "Week1-introduction.html#hook-setup",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Introduction",
+    "text": "Introduction\n\n\nWhat is your name?\nWhat do you study?\nWhat is your favourite café in Missoula?\n\n\n\n\nBefore we go further, let’s take a few minutes for introductions. Please introduce yourself to the class, say what you study, and what is your fav cafe in Missoula!"
+  },
+  {
+    "objectID": "Week1-introduction.html#toblers-first-law-of-geography",
+    "href": "Week1-introduction.html#toblers-first-law-of-geography",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Tobler’s First Law of Geography",
+    "text": "Tobler’s First Law of Geography\n\n“Everything is related to everything else, but near things are more related than distant things.”\n\nThis means that samples from nearby locations are more similar than samples far apart.\n\nThe first spatial concept is what is known as Tobler’s first law of geography.\nIn this class, but more broadly in spatial ecology we borrow a lot from geography.\nThis statement means that geography is never random. If you sample two points close to each other, they are likely to be similar simply because of their proximity. Your favorite cafe is likely to be the same as your neighbors cafe and less likely to be the same as MSU students living in Bozeman.\nFun fact about Tobler is that he was a cartographer and statistician published the first paper on using computers for making maps."
+  },
+  {
+    "objectID": "Week1-introduction.html#space-the-final-frontier",
+    "href": "Week1-introduction.html#space-the-final-frontier",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Space: the final frontier",
+    "text": "Space: the final frontier\n\nKareiva opened a 1994 Ecology editorial by calling space the final frontier for ecological theory.\n\nEcology had been about space (e.g., Darwin’s entangled bank and Hutchinson’s ecological theater).\n\nWhat changed in the 1990s was not the recognition that space matters. It was the arrival of data that were spatially explicit and models that could use them.\n\n\nIn ecology, space has been called the final frontier.\nThis is what Kareiva wrote in 1994 in a one-page Ecology editorial piece “Space: the final frontier for ecological theory”.\nDarwin’s entangled bank: Plants, bugs, birds, and worms depend on each other and compete for survival in a shared space. The “entangled bank” is the famous final-paragraph metaphor in Charles Darwin’s On the Origin of Species.\nLikewise, Hutchinson’s ecological theatre refers to habitat/space limits as a driving force for species dynamics.\nKareiva’s phrase is a Star Trek reference and if you are under 30 you might miss it. The joke is that it arrived 40-ish years later.\nThe point is that spatial ecology was not a conceptual breakthrough. It was overwhelmingly a data-and-computation breakthrough applied to concepts that Watt had articulated in 1947. The field simply had not built the tools to say so quantitatively.\nnew methods in this field usually follow new data, not new theory."
+  },
+  {
+    "objectID": "Week1-introduction.html#spatial-ecology",
+    "href": "Week1-introduction.html#spatial-ecology",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Spatial ecology",
+    "text": "Spatial ecology\n\n“The study and modeling of the role(s) of space on ecological processes, which in turn affect ecological patterns.”\n\nDefinition by Fletcher & Fortin, 2018\n\n\n\nThe term was coined by Tilman and Kareiva in 1997, in an edited volume on the role of space in population dynamics and interspecific interactions.\n“spatial ecology” is younger than most of your students. The field naming itself in 1997 is recent enough that the founding figures are still publishing"
+  },
+  {
+    "objectID": "Week1-introduction.html#processes-and-patterns",
+    "href": "Week1-introduction.html#processes-and-patterns",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Processes and patterns",
+    "text": "Processes and patterns\nWe usually observe the pattern and want to infer the process.\n\nSpace acts on processes (dispersal, competition, demography)\nProcesses generate patterns (distributions, abundance surfaces)\nprocess → pattern → inference\n\n\n\nspace acts on processes, and processes generate patterns. The arrow runs process to pattern.\n\nAlmost everything we do analytically runs the arrow backwards — we observe pattern and try to infer process. Many processes can generate the same pattern."
+  },
+  {
+    "objectID": "Week1-introduction.html#space-in-ecology-dependence",
+    "href": "Week1-introduction.html#space-in-ecology-dependence",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Space in Ecology: dependence",
+    "text": "Space in Ecology: dependence\n\nAll aspects of ecology play out in space.\n\nIf space is inherent to every ecological process, then any analysis that assumes observations are independent and identically located is making a claim about biology which is usually false.\n\nIn ecology, we know that space is inherent to every ecol process. This is one sentence to hang the semester on.\nIf you find a Wood Turtle in a specific stream reach, the odds of finding another one ten meters away are much higher than finding one ten kilometers away. This is Tobler’s Law.\nIn statistics, this creates a “nuisance” because if our samples aren’t independent, we are essentially “double-counting” our data, which makes our results look more significant than they really are\nWould that be a type I or type II error? False positives"
+  },
+  {
+    "objectID": "Week1-introduction.html#space-in-ecology-scale",
+    "href": "Week1-introduction.html#space-in-ecology-scale",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Space in Ecology: scale",
+    "text": "Space in Ecology: scale\n\nAll aspects of ecology play out in space.\n\nSpatial structure can alter outcomes of ecological studies.\n\nIgnoring space isn’t a neutral simplification, it’s rather an assumption that location carries no information. Almost nobody would defend that claim out loud, yet it’s baked into most standard models.\nConsider the Wood Turtle: it needs instream habitat for winter, riparian areas for spring, and upland sites for summer foraging. It operates across an entire watershed mosaic. If we only study the turtle at the “microhabitat” scale (the logs it sits on), we miss the “landscape” scale (the connectivity between the river and the forest) that it needs to survive its 50+ year lifespan"
+  },
+  {
+    "objectID": "Week1-introduction.html#space-environment-relationship",
+    "href": "Week1-introduction.html#space-environment-relationship",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Space-environment relationship",
+    "text": "Space-environment relationship\nSA-env: Spatial structure of the environment\nSD: Spatial dependence of species response to spatially structured environment\nSA-sp: Spatial autocorrelation of the species\n\nSpace affects species patterns directly and indirectly. Let’s talk about this arrow. SD — spatial dependence: This is the arrow ecologists usually want to estimate. It is the habitat association, the resource selection coefficient, the niche relationship.\nThe problem: SD is measured in a system where SA-env and SA-sp are both operating, and all three arrows produce the same patterns."
+  },
+  {
+    "objectID": "Week1-introduction.html#spatial-pattern-sa-env",
+    "href": "Week1-introduction.html#spatial-pattern-sa-env",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Spatial pattern: SA-env",
+    "text": "Spatial pattern: SA-env\nSA-env: Spatial structure of the environment\n\nSA-env is a property of the world, not of the sampling or the species.\n\n\n-SA-env : The environment is autocorrelated for reasons that have nothing to do with your study organism. Elevation is smooth. Temperature is smooth. Soil type comes in patches because geology comes in patches.\nNearby places resemble each other environmentally, and that would be true if your species went extinct tomorrow.\nwhat’s the coldest place within 200 m of where you are sitting? The U.S. Forest Service building just off East Beckwith Avenue or Mansfield Library.\nwhat’s the coldest place within 200 km of where you are sitting? Glacier NP, Lost Trail Pass near Idaho border,\nThe first is nearly the same temperature as the room; the second could be 20°C different."
+  },
+  {
+    "objectID": "Week1-introduction.html#spatial-pattern-sa-sp",
+    "href": "Week1-introduction.html#spatial-pattern-sa-sp",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Spatial pattern: SA-sp",
+    "text": "Spatial pattern: SA-sp\nSA-sp: Spatial autocorrelation of the species\n\nOrganisms cluster for endogenous reasons: limited dispersal, territoriality, conspecific attraction, contagious reproduction, local demographic history.\n\n\n-SA-sp: Organisms cluster for endogenous reasons: limited dispersal, territoriality, conspecific attraction, contagious reproduction, local demographic history.\nThis is the arrow that would still exist in a perfectly uniform environment.\n“so how do you ever separate them?” with difficulty, with assumptions, and sometimes not at all — which is why experiments like Huffaker’s, coming up in three slides, retain their value.\nExogenous processes are organism responses to environmental factors that are themselves spatially structured. Climate, local habitat features, microhabitat heterogeneity, patch disturbance and succession\nEndogenous processes - Movement, dispersal, migration - Demography, genetic variation, behavior - Competition, facilitation, trophic interactions"
+  },
+  {
+    "objectID": "Week1-introduction.html#why-does-it-matter",
+    "href": "Week1-introduction.html#why-does-it-matter",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Why does it matter?",
+    "text": "Why does it matter?\nAll three produce similar maps, confusing them has direct costs:\n\nFalse positive error. Autocorrelated residuals violate independence; standard errors shrink, p-values shrink, and you discover relationships that are not there.\nWrong mechanism. You attribute to habitat what dispersal produced, or vice versa.\nBad extrapolation. A model fitted to a confounded signal predicts badly in a new landscape.\n\n\nAutocorrelation means your effective sample size is smaller than your nominal sample size, sometimes by an order of magnitude.\nGive the concrete version: 500 vegetation plots on a 30 m grid may carry the information of perhaps 40 independent plots. Everything downstream of that mistake is wrong in the same direction — too confident."
+  },
+  {
+    "objectID": "Week1-introduction.html#activity",
+    "href": "Week1-introduction.html#activity",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Activity",
+    "text": "Activity\n\nFormat: small groups of 2–3\nMaterials: one set of 11 cut cards per group, three labelled table zones (SA-env, SA-sp, SD)\nYour group’s job: sort those 11 cards (real ecological statements) into SA-env, SA-sp, SD. (8min)\n\n\nPrint slide 60 on cardstock and cut into 11 cards; one set per pair, so a class of 30 needs 15 sets. They laminate well and you will reuse them every year.\nDeliberately place three labelled zones on tables rather than having students write answers. Physically moving a card is a commitment, and commitments generate the arguments you want to overhear while circulating.\nDo not answer questions during phase 1. Write recurring ones on the board and address them in phase 3.\npreparation:\nSort each statement into SA-env, SA-sp, or SD.\n\nWolverine detections cluster because juveniles settle near their natal range.\nWhitebark pine occurrence increases with elevation.\nMean July temperature declines smoothly northward across Montana.\nSage-grouse leks are clumped because displaying males aggregate.\nBull trout occupy reaches where August stream temperature stays below 12 °C.\nNeighbouring stands share an age class because one 1910 fire burned them together.\nLupine seedlings occur within a metre of parent plants because seeds fall short.\nGrizzly bear use increases in huckleberry-dominated cover.\nAdjacent snow-course stations report similar snow water equivalent.\nTwo survey points 100 m apart record the same singing male.\nAmphibian occupancy is higher in wetlands with longer hydroperiod.\n\nCard 10 is the trap and it is the most valuable card in the set. It is not biological aggregation at all — it is double-counting, a measurement artefact that produces a signature identical to SA-sp.\nMost pairs file it under SA-sp, which is defensible and gives you the opening to make the point that the same pattern in data can arise from biology or from sampling design, and the data cannot tell you which. That is the honest version of what Chapter 5 does and does not deliver.\nCard 6 is the second-best card: a legacy effect masquerading as an environmental gradient."
+  },
+  {
+    "objectID": "Week1-introduction.html#activity-debrief",
+    "href": "Week1-introduction.html#activity-debrief",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Activity debrief",
+    "text": "Activity debrief\nSA-env and SA-sp are things about the world; SD is the thing we want to estimate; and card 10 is a reminder that some spatial structure is about neither the world nor the organism but about study design.\n\nDo not simply read the key. Ask which cards produced disagreement and work those only. A key read aloud teaches nothing; a disputed card teaches a lot.\n\n\n\n\n\n\n\n\nPile\nCards\nExplanation\n\n\n\n\nSA-env\n3, 6, 9\nEnvironment structured for physical or historical reasons; no organism involved\n\n\nSA-sp\n1, 4, 7, 10\nClustering generated by the organism’s own biology — or, for 10, by the survey design\n\n\nSD\n2, 5, 8, 11\nA species responding to a spatially structured environmental variable\n\n\n\nCard 10 is the one to argue about. Two points recording one male is not aggregation — it is double counting. Same signature in the data, entirely different cause, and no amount of spatial statistics will separate them."
+  },
+  {
+    "objectID": "Week1-introduction.html#theoretical-foundations",
+    "href": "Week1-introduction.html#theoretical-foundations",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Theoretical Foundations",
+    "text": "Theoretical Foundations\n\nTraditionally, ecological models ignored the role of space (e.g., classic Lotka-Volterra models).\nHowever, spatial structure can fundamentally alter outcomes:\n\nFacilitates species coexistence by creating spatial refuges\nGenerates source-sink dynamics where sink habitats are sustained by immigration\nDrives spatial population synchrony through regional climatic factors or dispersal\n\n\n\nEcological theory has undergone a paradigm shift. We now understand that ignoring space can lead to completely wrong conclusions. For example, two competing species that cannot coexist in a well-mixed laboratory beaker can easily coexist in a spatially heterogeneous environment where they use different spatial niches."
+  },
+  {
+    "objectID": "Week1-introduction.html#spatial-ecology-timeline",
+    "href": "Week1-introduction.html#spatial-ecology-timeline",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Spatial Ecology Timeline",
+    "text": "Spatial Ecology Timeline"
+  },
+  {
+    "objectID": "Week1-introduction.html#plant-community-watt-1947",
+    "href": "Week1-introduction.html#plant-community-watt-1947",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Plant community: Watt 1947",
+    "text": "Plant community: Watt 1947\n\nPattern and process are linked, not separate objects of study.\n\n\n\nThis is a bunchgrass slope outside town. Is anything happening in this picture? Most people say no. It looks like a still life. Watt’s answer was that you’re looking at a time-lapse that someone has flattened into a single frame — and once you learn to read it, the picture starts moving.\nThink about a family reunion photo. In one photo you have a newborn, a teenager, a parent, a grandparent. You are not looking at four unrelated people. You are looking at one human life cycle displayed all at once in space. Watt’s insight was that a plant community does the same thing: the patch dying back over there and the patch filling in over here are not different communities. They’re the same community at different points in its rotation."
+  },
+  {
+    "objectID": "Week1-introduction.html#pattern-and-process",
+    "href": "Week1-introduction.html#pattern-and-process",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Pattern and Process",
+    "text": "Pattern and Process\n\nA static plant community is in fact a dynamic mosaic of patches rotating through life and death.\n\n\nPlants occur in bounded communities, i.e., patches, that together form a dynamic mosaic across the landscape.\nPatterns arise from processes such as competition and dispersal.\n\n\nAs analogy, think about the difference bet escalator vs. carousel. Back in a day, the dominant idea was that succession runs one direction and stops at the top like an escalator. Watt gave it a carousel: every horse is going around, they’re all at different points, and the ride as a whole never ends. Neither horse is “ahead.”\nA plant community that looks static is actually a slow-motion mosaic. Every patch within it is somewhere in a life cycle — being born, filling in, peaking, falling apart — and because the patches are out of step with one another, the whole holds still while every part of it churns.\nthe landscape as a whole is stable: stadium analogy"
+  },
+  {
+    "objectID": "Week1-introduction.html#universe-of-oranges-huffaker-1958",
+    "href": "Week1-introduction.html#universe-of-oranges-huffaker-1958",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Universe of oranges: Huffaker 1958",
+    "text": "Universe of oranges: Huffaker 1958\nLotka-Volterra models assume every predator can encounter every prey with equal probability.\n\n\n\nLotka-Volterra assumes every predator can encounter every prey with equal probability, which is a statement that space does not exist.\nThis mathematical model was difficult to reproduce in the lab.\n\nIn small, homogeneous habitats: predator eats prey, both crash. No stability."
+  },
+  {
+    "objectID": "Week1-introduction.html#spatial-refugia",
+    "href": "Week1-introduction.html#spatial-refugia",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Spatial refugia",
+    "text": "Spatial refugia\n\nSpace can stabilise an interaction that is unstable without it.\n\nThe physical layout of the landscape, i.e., spatial configuration, is what prevents total collapse or accelerates colonizations.\n\nHuffaker worked with predatory and herbivorous mites on arrays of oranges, manipulating the spatial structure of the arena.\n\nWith spatial refugia for prey and barriers slowing the predator: persistent oscillations. The system holds.\n\nSame species. Same biology. Different spatial structure, different outcome.\nHuffaker built elaborate arrays of oranges with vaseline barriers and wooden posts so the prey mite could disperse by silk and the predator couldn’t follow easily. Basically a landscape connectivity experiment in 1958.\nBefore this, spatial concepts were essentially absent from coexistence theory. ,,,\nWorth describing the apparatus: oranges as prey habitat, rubber balls as non-habitat, petroleum jelly barriers to slow the predator, and small wooden posts with wires so the prey mite — which disperses on silk threads — could travel while the walking predator could not.\nHuffaker engineered a dispersal asymmetry. That is the mechanism, and it is the same mechanism that keeps metapopulations going: prey stay one step ahead in space, not in time."
+  },
+  {
+    "objectID": "Week1-introduction.html#diffusion-reaction-skellam-1951",
+    "href": "Week1-introduction.html#diffusion-reaction-skellam-1951",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Diffusion-reaction: Skellam 1951",
+    "text": "Diffusion-reaction: Skellam 1951\n\nAnimal populations move in a very similar way.\n\n\n\nImagine a glass of water. If I add a drop of ink to water, I will see that the ink slowly spreads throughout the water on its own. The ink particles move from an area of high concentration to lower concentration, gradually mixing with water until it spreads evenly.\nJohn Skellam was the first to realize that animal populations move in a very similar way, using a concept called reaction-diffusion.\nMain point: Skellam proved that for a population to survive in a specific habitat patch, the patch must be large enough for the animals to reproduce faster than they “leak” out the edges. If the patch is too small, the “ink” (the population) spreads too thin and disappears."
+  },
+  {
+    "objectID": "Week1-introduction.html#muskrat-escape",
+    "href": "Week1-introduction.html#muskrat-escape",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Muskrat escape",
+    "text": "Muskrat escape\n\nSpeed of invasion is determined by how fast individuals wander, and how fast they breed.\n\n\n\nThis is a map of central Europe. This is Prague in Czech Republic. In 1905, a handful of muskrats escaped a fur-breeding estate near Prague. Within two decades they were all over central Europe, and because they were a nuisance, the invasion was mapped carefully year by year. Skellam plotted the square root of the occupied area against time and got a straight line. Skellam used partial differential equations to track the “random walk” of organisms.\nHe modeled the speed of an invasion with two numbers. once you have these, you can forecast a biological invasion. Nobody had been able to do that before.\nThis laid the foundation for the Spatially Implicit Models (SIMs) we use to predict the spread of invasive species and the minimum area needed for nature reserves."
+  },
+  {
+    "objectID": "Week1-introduction.html#herbivorous-insects-kareiva-1992",
+    "href": "Week1-introduction.html#herbivorous-insects-kareiva-1992",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Herbivorous insects: Kareiva 1992",
+    "text": "Herbivorous insects: Kareiva 1992\n\nThe diffusion coefficient is not a property of the organim: rather a property of the organism in a particular landscape.\n\n\n\nSkellam gave us the math, he came up with a mathematical model to forcast invasion. The awkward part is that his equations contain a diffusion coefficient for how fast organisms wander. For decades, nobody measured it in the field. Like you have a reciepe book, that lists the ingredients but not their quantities!\nWith a 30 year gap, Kareiva did an experiment that brought that theoretical model to reality.\nKareiva is famous for bridging the gap between theoretical models and natural history. He conducted landmark experiments (often using ladybugs and aphids) to see if predators actually follow the “smooth” rules of movement Skellam predicted.\nset up experimental collard arrays where he manipulated plant spacing and plant quality, marked Phyllotreta cruciferae beetles, released them, and tracked how they redistributed — then fit diffusion models to the results. The finding that mattered: the diffusion coefficient is not a property of the beetle. It’s a property of the beetle in a particular landscape. Change the spacing of the plants and you change how the animal moves through them."
+  },
+  {
+    "objectID": "Week1-introduction.html#herbivorous-insects-kareiva-1993",
+    "href": "Week1-introduction.html#herbivorous-insects-kareiva-1993",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Herbivorous insects: Kareiva 1993",
+    "text": "Herbivorous insects: Kareiva 1993\nKareiva’s empirical test: diffusion models predicted spread adequately despite obviously non-random insect movement.\n\n\nIn A second study, Kareiva collected mark-recapture data for twelve species of herbivorous insects in relatively homogeneous habitats and asked whether a simple passive diffusion model could reproduce their dispersal-distance distributions. For eight of the twelve, it could.\nThe four that departed were the interesting ones — he treated the mismatches as instructions for how movement models needed to be modified, and noted that the variation in diffusion coefficients within and between species was large enough to have real consequences for population dynamics."
+  },
+  {
+    "objectID": "Week1-introduction.html#activity-overview",
+    "href": "Week1-introduction.html#activity-overview",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Activity overview",
+    "text": "Activity overview\n\nFormat: small groups of 2–3\nMaterials: one printed 10 × 10 grid per group, pens\nEvery group gets an identical landscape: a 10 × 10 grid, 100 cells. Every group gets exactly 25 cells of habitat to shade in.\nYour group’s job: arrange those 25 cells to give your species the best possible chance of persisting for 100 years. Shade them however you like.\n\nBefore you start, draw one card from the card deck. It tells you which species you are planning for. Do not show it to the other groups.\n\nPreparation: print grids and cut two kinds of cards, roughly half and half.\nCARD A — “Your species is a poor disperser. Adults rarely move more than one cell in a lifetime.”\nCARD B — “Your species is a strong disperser but needs a large territory. A single pair requires at least 8 connected cells.”\nThat hidden asymmetry is the whole trick. Do not hint at it. Groups will assume everyone got the same brief, which is exactly what makes the reveal work.\nCirculate while they draw. You will see three recurring solutions: one big block, a scatter of singletons, and a chain of clumps. All three are useful in the debrief."
+  },
+  {
+    "objectID": "Week1-introduction.html#hook-run",
+    "href": "Week1-introduction.html#hook-run",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Activity",
+    "text": "Activity\n\nDesign (&lt;4 min). Shade your 25 cells. Agree on your reasoning in one sentence.\nGallery walk (&lt;6 min). Tape your grid to the wall. Walk the room. Do not talk yet, just look.\nTwo questions, whole class (&lt;10 min).\n\nEvery landscape on this wall has exactly the same amount of habitat. Why do they look different?\nPoint to the grid you think is worst. Now find out which card that group drew.\n\n\n\nThe reveal is question 2. A design that is disastrous for Card A (scattered singletons, no cell adjacent to another) is often perfectly reasonable for Card B, and the block design that looks obviously right to Card B groups may strand a Card A population that cannot recolonise after a local die-off.\nThe line to land, in these words or close to them: the amount of habitat did not change — only its arrangement did — and the arrangement changed the answer. That sentence is the thesis of the entire course, and you have got students to generate it themselves in eight minutes rather than reading it in a preface.\nIf a group asks “what counts as connected?” — refuse to answer. Tell them to define it and write the definition on their grid. You will use those competing definitions again in Chapter 9."
+  },
+  {
+    "objectID": "Week1-introduction.html#hook-debrief",
+    "href": "Week1-introduction.html#hook-debrief",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Activity debrief",
+    "text": "Activity debrief\nWithout being told any of the terminology, your group made decisions about:\n\nPatch size and isolation (the two axes of island biogeography theory)\nConnectivity (whether an individual can get from A to B)\nSpecies-specific perception of the same physical landscape\nConfiguration (arrangement versus amount)\n\nYou also discovered the uncomfortable part: the “right” map depends on the organism, and two competent groups looking at identical data can reach opposite conclusions when the organism differs.\n\nStudents arrive expecting spatial analysis to be a machine that produces the objectively correct map. It is not. It produces a map that is conditional on assumptions about the organism, and the whole discipline is about making those assumptions explicit and testable rather than tacit."
+  },
+  {
+    "objectID": "Week1-introduction.html#island-biogeography-macarthur-wilson",
+    "href": "Week1-introduction.html#island-biogeography-macarthur-wilson",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Island biogeography: MacArthur & Wilson",
+    "text": "Island biogeography: MacArthur & Wilson\n\nPatch size and spatial configuration govern persistence through colonization and extinction.\n\n\n\nArea → extinction rate (bigger islands, smaller extinction risk)\nIsolation → colonisation rate (nearer islands, higher colonisation)\n\n\nGroups traded off patch size against isolation with 25 cells. That is the theory\nIf your individuals are allowed to disperse from a mainland source to sourranding islands: islands closer to the mainland have a higher colonization rate bigger islands have a smaller extinction risk."
+  },
+  {
+    "objectID": "Week1-introduction.html#from-islands-to-metapopulations",
+    "href": "Week1-introduction.html#from-islands-to-metapopulations",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "From islands to metapopulations",
+    "text": "From islands to metapopulations\n\nDispersal can protect a local population from extinction.\n\n\nHow to model metapopulation dynamics?\n➢ each patch can be occupied (1) or unoccupied (0)\n➢ at each time step, occupied patches go extinct with probability ε\n➢ unoccupied patches can be colonized with probability γ\n➢ objective is to estimate the fraction of patches occupied ѱ\n\n\n\nDispersal … . This is a schematic of our metapop. Some sites are occupied, some aren’t. At each timestep, occupied patches go extinct with a probability…"
+  },
+  {
+    "objectID": "Week1-introduction.html#metapopulation-dynamic-levins-1969",
+    "href": "Week1-introduction.html#metapopulation-dynamic-levins-1969",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Metapopulation dynamic: Levins 1969",
+    "text": "Metapopulation dynamic: Levins 1969\n\nMore patches leads to lower metapopulation extinction risk\n\n✓ Unoccupied sites are “rescued” by colonization from occupied sites\n✓ Critical to maintain patches, even if they are currently unoccupied\n✓ Connectivity of patches important for increasing colonization probability\n\nIf there are more patches in a metapop, then the extinction risk will be lower. …\nAt any point in time, what proportion of sites will go extinct?\nAt any point in time, what proportion of sites will be colonized?\nAt any point in time, what proportion of sites will be occupied?\nLevins 1969 is a two-page paper in a newsletter of the Entomological Society of America."
+  },
+  {
+    "objectID": "Week1-introduction.html#what-made-it-possible",
+    "href": "Week1-introduction.html#what-made-it-possible",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "What made it possible",
+    "text": "What made it possible\nThe emergence of spatial modelling frameworks was fostered by technological advance at least as much as by theory:\n\nMassive increases in high-resolution spatial data (e.g., GPS telemetry, LIDAR, remote sensing)\nAdvanced statistical methods (e.g., Geostatistics, Species Distribution Models, Individual Based Models)\nComputing power\nOpen-source software ecosystems, which allow reproducible script-based modelling\n\nThese allowed conceptual and modelling developments to represent space more realistically. The ability to explicitly include the effects of space was pivotal in the explosion of novel ecological questions over recent decades.\n\nWe talked about theories built to hold space but it’s worth emphasizing what actually made it possible to model the role of space was technological advances, including remote sensing and computing power.\nWatt had the idea of spatial patterns and processe in 1947. He could not have fitted a spatial regression to a Landsat data, because neither existed.\nThe bottleneck in this field has usually been measurement and computation, — which means that watching what becomes newly quantifiable is a reasonable strategy for finding research questions."
+  },
+  {
+    "objectID": "Week1-introduction.html#how-to-incorporate-space",
+    "href": "Week1-introduction.html#how-to-incorporate-space",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "How to incorporate space",
+    "text": "How to incorporate space\n\n\n\n\n\n\n\nSpatial aspect\nEffect on process and data\n\n\n\n\nx–y coordinates\nLocations of data relative to other locations\n\n\nautocorrelation\nMagnitude, scale, direction of data as a function of distance between observations\n\n\nrelationship\nLocations of abiotic predictor affect biotic response\n\n\nlegacy\nPast spatial pattern influences present process and pattern\n\n\ncontingency\nNearby locations influence process and pattern\n\n\nperception\nIntervening landscape features shape movement and dispersal ability\n\n\nmultiple scales\nSeveral scales act additively on present spatial pattern\n\n\n\n\nHere is an overview of different ways space palys a role and can be incorporated in ecological data analysis. Think about your own research projects and pick the row most relevant to your work. It surfaces their systems early and gives you material for later examples.\nSpatial perception is what we discovered in the second activity: the same physical landscape is a different landscape to a poor disperser and a strong one.\nYour groups drew grids under two different dispersal assumptions and got two different “correct” answers. That is spatial perception.\nSpatial legacy remember card 6? Neighbouring stands share an age class because one 1910 fire burned them together."
+  },
+  {
+    "objectID": "Week1-introduction.html#syllabus",
+    "href": "Week1-introduction.html#syllabus",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Syllabus",
+    "text": "Syllabus\nAccess course syllabus on Canvas."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html",
+    "href": "Week1-GettingStartedwR.html",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "",
+    "text": "R is an impressive, do-it-all software: loading spatial datasets, to fitting models, analyzing patterns, and creating publication-quality maps and plots.\nreproducibility of data summaries and statistical analyses.\nAutomation: automates repetitive or mundane data processing tasks.\nOpen-source and free: constant updates contributed by scientists worldwide.\n\n\nThis introductory lab is a foundation for students who have not used R often, or who want to review the basics of data and spatial data structures. Everything in this deck runs in the browser, so nobody needs a working local install on day one.\n\n\n\n\n\nTo view documentation for any loaded function, use help() or ?:\n\n\n?runif\nhelp(runif)\n\n\nhelp(package = \"sf\") lists every function in a package.\n??aggregate runs a fuzzy search.\nOnline resources are enormous.\n\n\nIn R you never have to memorise code. Help pages document the expected inputs (arguments) and the returned value."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#why-r",
+    "href": "Week1-GettingStartedwR.html#why-r",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Why R?",
+    "text": "Why R?\n\nR is an impressive, do-it-all software: loading spatial datasets, to fitting models, analyzing patterns, and creating publication-quality maps and plots.\nreproducibility of data summaries and statistical analyses.\nAutomation: automates repetitive or mundane data processing tasks.\nOpen-source and free: constant updates contributed by scientists worldwide.\n\n\nThis introductory lab is a foundation for students who have not used R often, or who want to review the basics of data and spatial data structures. Everything in this deck runs in the browser, so nobody needs a working local install on day one."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#getting-help-in-r",
+    "href": "Week1-GettingStartedwR.html#getting-help-in-r",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Getting Help in R",
+    "text": "Getting Help in R\n\nTo view documentation for any loaded function, use help() or ?:\n\n\n?runif\nhelp(runif)\n\n\nhelp(package = \"sf\") lists every function in a package.\n??aggregate runs a fuzzy search.\nOnline resources are enormous.\n\n\nIn R you never have to memorise code. Help pages document the expected inputs (arguments) and the returned value."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#objects-and-assignment",
+    "href": "Week1-GettingStartedwR.html#objects-and-assignment",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Objects and Assignment",
+    "text": "Objects and Assignment\nThe core building block in R is the object. Objects hold data, models, and functions.\n\n# Assign a sequence of numbers to an object named x\nx &lt;- 1:15\n\n# Display it\nprint(x)\n\n\n\n\n\n\n\nNote\n\n\n&lt;- is the assignment arrow. Typing the object’s name (or wrapping it in print()) displays its contents."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#objects-can-be-overwritten",
+    "href": "Week1-GettingStartedwR.html#objects-can-be-overwritten",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Objects Can Be Overwritten",
+    "text": "Objects Can Be Overwritten\n\nx &lt;- 1 + 15     # x is overwritten\ny &lt;- 5.2        # second object\nz &lt;- x^y        # third object\n\nz\n\nls()            # list every object in the workspace\n\n\nNotice that x now holds 16. The previous contents are gone without warning."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#objects-hold-any-type",
+    "href": "Week1-GettingStartedwR.html#objects-hold-any-type",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Objects Hold Any Type",
+    "text": "Objects Hold Any Type\n\nx &lt;- \"wolverine\"\ny &lt;- FALSE\nz &lt;- 42L\n\nclass(x)\nclass(y)\nclass(z)\n\n\n\n\n\n\n\nNote\n\n\nCharacter values are wrapped in quotation marks. TRUE and FALSE are not, and must be uppercase. The L suffix forces an integer."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#vectors",
+    "href": "Week1-GettingStartedwR.html#vectors",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Vectors",
+    "text": "Vectors\nA vector is a sequence of values of one type. Build one with c().\n\nmass_kg  &lt;- c(38, 217, 7, 40)\nspecies  &lt;- c(\"wolverine\", \"black bear\", \"marten\", \"coyote\")\nmt_range &lt;- c(TRUE, TRUE, TRUE, TRUE)\n\nlength(mass_kg)\nmean(mass_kg)\nspecies[2]              # second element\nmass_kg[mass_kg &gt; 30]   # logical subsetting"
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#vectors-1",
+    "href": "Week1-GettingStartedwR.html#vectors-1",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Vectors",
+    "text": "Vectors\nMath operations are done element by element and no loop is required.\n\nmass_kg &lt;- c(38, 217, 7, 40)\n\nmass_lb &lt;- mass_kg * 2.205\nround(mass_lb, 1)\n\n# Summary statistics\nc(min = min(mass_kg), max = max(mass_kg), sd = round(sd(mass_kg), 2))"
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#data-frames",
+    "href": "Week1-GettingStartedwR.html#data-frames",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Data Frames",
+    "text": "Data Frames\nA data frame stitches vectors together as columns of a table. Columns may hold different types; every column must be the same length.\n\nmass_kg  &lt;- c(38, 217, 7, 40)\nspecies  &lt;- c(\"wolverine\", \"black bear\", \"marten\", \"coyote\")\nmt_range &lt;- c(TRUE, TRUE, TRUE, TRUE)\n\nsp_data &lt;- data.frame(species, mass_kg, mt_range)\nsp_data\n\nstr(sp_data)"
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#your-turn-classes-and-subsetting",
+    "href": "Week1-GettingStartedwR.html#your-turn-classes-and-subsetting",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Your Turn: Classes and Subsetting",
+    "text": "Your Turn: Classes and Subsetting\n\n\n\n\n\n\n\nExercise 1\n\n\nThree transects were surveyed: North, Mid, and South and bird observations were counted along the transect. Run the code, then change the threshold from 10 to 15 and re-run. What does subset() give you when nothing matches?\n\n\n\n\n\nsite_names &lt;- c(\"North\", \"Mid\", \"South\")\ncounts     &lt;- c(12, 18, 5)\nmy_df      &lt;- data.frame(site = site_names, count = counts)\n\nmy_df\n\n# Keep only rows where count is greater than 10\nsub_df &lt;- subset(my_df, count &gt; 10)\nsub_df\n\n\n\n\n\n\n\n\nWhy no my_df$?\n\n\nThe ‘[’ below is more predictable than subset().\n\n\n\n\n\n\n\n\n\n\n\nSolution\n\n\n1sub_df &lt;- subset(my_df, count &gt; 10)\nsub_df\n\n# The bracket equivalent, which is worth knowing:\n2my_df[my_df$count &gt; 10, ]\n\n1\n\nsubset() evaluates the condition inside the data frame.\n\n2\n\nBrackets take [rows, columns]; leaving the column slot empty keeps all columns."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#why-simulate",
+    "href": "Week1-GettingStartedwR.html#why-simulate",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Why Simulate?",
+    "text": "Why Simulate?\n\nSimulated data are reproducible\nYou know the truth, so you can check whether your analysis recovers it.\n\nEvery dataset in this lesson is generated by the code you can see. Nothing is loaded from disk or from the internet.\n\nThis is also how you check whether an estimator is behaving: simulate from known parameters, fit the model, and see whether the estimates land near the truth."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#simulate-a-camera-trap-dataset",
+    "href": "Week1-GettingStartedwR.html#simulate-a-camera-trap-dataset",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Simulate a Camera-Trap Dataset",
+    "text": "Simulate a Camera-Trap Dataset\nRun this cell before the ones that follow. The object camera is used on the next several slides.\n\nset.seed(591)\n\nsp  &lt;- c(\"Elk\", \"Mule Deer\", \"Black Bear\", \"Steller's Jay\", \"Clark's Nutcracker\")\ncls &lt;- c(\"Mammal\", \"Mammal\", \"Mammal\", \"Bird\", \"Bird\")\n\ncamera &lt;- expand.grid(site_id = sprintf(\"S%02d\", 1:20),\n                      week    = 1:8,\n                      species = sp,\n                      stringsAsFactors = FALSE)\n\ncamera$class &lt;- cls[match(camera$species, sp)]\ncamera$age   &lt;- sample(c(\"Adult\", \"Juvenile\"), nrow(camera), TRUE, c(0.75, 0.25))\ncamera$count &lt;- rpois(nrow(camera), lambda = ifelse(camera$class == \"Bird\", 2.5, 1.2))\n\ndim(camera)\nhead(camera)\n\n\n\n\n\n\n\nNote\n\n\nexpand.grid() builds every combination of site, week, and species: 20 × 8 × 5 = 800 rows."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#inspecting-a-data-frame",
+    "href": "Week1-GettingStartedwR.html#inspecting-a-data-frame",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Inspecting a Data Frame",
+    "text": "Inspecting a Data Frame\n\n\n\nEach row is one observation\nEach column is one variable\n\n\n\nhead(camera)\ntail(camera, 3)\n\n\n\n\n\n\n\n\nTip\n\n\nWhat do you expect tail() to return before you run it?"
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#dimensions-and-names",
+    "href": "Week1-GettingStartedwR.html#dimensions-and-names",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Dimensions and Names",
+    "text": "Dimensions and Names\n\ndim(camera)      # rows, then columns\nnrow(camera)\nncol(camera)\nnames(camera)    # column names\nstr(camera)      # structure: class of every column\n\n\ndim() returns the size of each dimension. dimnames() returns row and column names, which for a data frame means row numbers and column names."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#three-ways-to-access-a-column",
+    "href": "Week1-GettingStartedwR.html#three-ways-to-access-a-column",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Three Ways to Access a Column",
+    "text": "Three Ways to Access a Column\n\nhead(camera$count)          # by name, with $\nhead(camera[, \"count\"])     # by name, with brackets\nhead(camera[, 6])           # by position\n\n\n\n\n\n\n\nTip\n\n\nR is case sensitive. camera$Count returns NULL, not an error."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#row-subsetting",
+    "href": "Week1-GettingStartedwR.html#row-subsetting",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Row Subsetting",
+    "text": "Row Subsetting\n\ncamera[1:3, ]                                    # rows 1 to 3\n\nbirds &lt;- camera[camera$class == \"Bird\", ]        # logical condition\ndim(birds)\n\nelk_wk1 &lt;- camera[camera$species == \"Elk\" & camera$week == 1, ]\nelk_wk1"
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#quantitative-summaries",
+    "href": "Week1-GettingStartedwR.html#quantitative-summaries",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Quantitative Summaries",
+    "text": "Quantitative Summaries\n\nmean(camera$count)\nround(mean(camera$count), 2)\nsummary(camera$count)\n\n# Class of each variable\nclass(camera$count)\nclass(camera$species)\n\n\n\n\n\n\n\nWarning\n\n\nWhy does mean(camera$species) fail? Run it and read the warning carefully — it is one you will meet often."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#sort-and-order",
+    "href": "Week1-GettingStartedwR.html#sort-and-order",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Sort and Order",
+    "text": "Sort and Order\n\nhead(sort(camera$count, decreasing = TRUE))   # sorts the values\n\nord &lt;- order(camera$count, decreasing = TRUE) # returns positions\nhead(camera[ord, ])                           # reorders whole rows\n\n\n\n\n\n\n\nNote\n\n\nsort() returns values. order() returns the positions that would sort those values, which is what you need to reorder an entire table."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#tallies-with-table",
+    "href": "Week1-GettingStartedwR.html#tallies-with-table",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Tallies with table()",
+    "text": "Tallies with table()\n\ntable(camera$age)\n\n# Combinations of two variables\ntable(camera$class, camera$age)\n\n# Number of species per class\ntable(camera$class, camera$species)"
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#summaries-with-aggregate",
+    "href": "Week1-GettingStartedwR.html#summaries-with-aggregate",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Summaries with aggregate()",
+    "text": "Summaries with aggregate()\ntable() counts rows. aggregate() summarises a variable within groups.\n\n# Mean count per age class\naggregate(count ~ age, data = camera, FUN = mean)\n\n# Break it down further\naggregate(count ~ class + age, data = camera, FUN = mean)\n\n# Total detections per species\naggregate(count ~ species, data = camera, FUN = sum)"
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#writing-your-own-function",
+    "href": "Week1-GettingStartedwR.html#writing-your-own-function",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Writing Your Own Function",
+    "text": "Writing Your Own Function\n\ndetection_rate &lt;- function(counts) {\n  n_surveys &lt;- length(counts)\n  n_detect  &lt;- sum(counts &gt; 0)\n  return(n_detect / n_surveys)\n}\n\ndetection_rate(camera$count)\n\n# Apply it by species\ntapply(camera$count, camera$species, detection_rate)\n\n\n\n\n\n\n\nNote\n\n\nSaving functions in a separate script and calling source(\"my_functions.R\") keeps analysis scripts readable."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#saving-and-reloading",
+    "href": "Week1-GettingStartedwR.html#saving-and-reloading",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Saving and Reloading",
+    "text": "Saving and Reloading\n\nwrite.csv(camera, \"camera.csv\", row.names = FALSE)\nsave(camera, file = \"camera.RData\")\n#list.files()\n\nrm(camera)                # remove from workspace\nexists(\"camera\")\n\nload(\"camera.RData\")      # bring it back\nexists(\"camera\")\nhead(camera, 3)\n\n\n\n\n\n\n\nNote\n\n\n.RData preserves classes and attributes exactly. .csv is portable but forgets that week was an integer and class was a character."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#your-turn-explore-the-data",
+    "href": "Week1-GettingStartedwR.html#your-turn-explore-the-data",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Your Turn: Explore the Data",
+    "text": "Your Turn: Explore the Data\n\n\n\n\n\n\n\nExercise 2\n\n\nUsing the simulated camera data, answer the questions below:\n\nHow many total detections were recorded across all rows?\nHow many species had at least one detection?\nHow many detections came from birds versus mammals?\nWhich species had the highest mean count per survey?\n\n\n\n\n\n\nset.seed(591)\nsp  &lt;- c(\"Elk\", \"Mule Deer\", \"Black Bear\", \"Steller's Jay\", \"Clark's Nutcracker\")\ncls &lt;- c(\"Mammal\", \"Mammal\", \"Mammal\", \"Bird\", \"Bird\")\ncamera &lt;- expand.grid(site_id = sprintf(\"S%02d\", 1:20),\n                      week = 1:8,\n                      species = sp,\n                      stringsAsFactors = FALSE)\ncamera$class &lt;- cls[match(camera$species, sp)]\ncamera$age   &lt;- sample(c(\"Adult\", \"Juvenile\"), nrow(camera), TRUE, c(0.75, 0.25))\ncamera$count &lt;- rpois(nrow(camera), lambda = ifelse(camera$class == \"Bird\", 2.5, 1.2))\n\n# 1. Total detections\nsum(camera$count)\n\n# 2. Number of species with at least one detection\nlength(unique(camera$species[camera$count &gt; 0]))\n\n# 3. Detections by class\naggregate(count ~ class, data = camera, FUN = sum)\n\n# 4. Mean count per species, highest first\nmn &lt;- aggregate(count ~ species, data = camera, FUN = mean)\nmn[order(mn$count, decreasing = TRUE), ]\n\n\n\n\n\n\n\n\nHint\n\n\nsum(), unique() with length(), aggregate(), and order() cover all four questions.\nsum(camera$count)\nlength(unique(camera$species[camera$count &gt; 0]))\n\n\n\n\n\n\n\n\n\n\n\nSolution\n\n\n# 1.\nsum(camera$count)\n\n# 2.\ndetected &lt;- camera[camera$count &gt; 0, ]\nlength(unique(detected$species))\n\n# 3.\naggregate(count ~ class, data = camera, FUN = sum)\n\n# 4.\nmn &lt;- aggregate(count ~ species, data = camera, FUN = mean)\nmn[order(mn$count, decreasing = TRUE), ]"
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#what-is-randomness",
+    "href": "Week1-GettingStartedwR.html#what-is-randomness",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "What Is Randomness?",
+    "text": "What Is Randomness?\n\nEvery element has an equal and independent chance of being selected.\nWe cannot predict any single outcome with certainty — this is a random (stochastic) process.\nHumans are poor random number generators. Ask ten people for “30 random points” and you will get suspiciously even spacing. That is why we use algorithms."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#uniform-distribution",
+    "href": "Week1-GettingStartedwR.html#uniform-distribution",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Uniform Distribution",
+    "text": "Uniform Distribution\nStart with 100 draws from a uniform distribution between 0 and 10.\n\nx_unif &lt;- runif(n = 100, min = 0, max = 10)\n\nsummary(x_unif)\nplot(x_unif, type = \"h\", col = \"#333333\",\n     xlab = \"Draw number\", ylab = \"Value\",\n     main = \"100 uniform draws in the order sampled\")\n\n\nCompare your output with your neighbour’s. Did you get the same values?"
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#reproducibility-with-set.seed",
+    "href": "Week1-GettingStartedwR.html#reproducibility-with-set.seed",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Reproducibility with set.seed()",
+    "text": "Reproducibility with set.seed()\n\nset.seed(2026)\na &lt;- runif(5, 0, 10)\n\nset.seed(2026)\nb &lt;- runif(5, 0, 10)\n\nround(a, 4)\nround(b, 4)\nidentical(a, b)\n\n\n\n\n\n\n\nNote\n\n\nset.seed() fixes the starting point of the random number generator. Put it at the top of any script you want to be reproducible."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#visualising-the-distribution",
+    "href": "Week1-GettingStartedwR.html#visualising-the-distribution",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Visualising the Distribution",
+    "text": "Visualising the Distribution\n\nset.seed(2026)\nx_unif &lt;- runif(n = 100, min = 0, max = 10)\n\nhist(x_unif,\n     col    = \"#DFD1A7\",\n     border = \"#333333\",\n     xlab   = \"Value\",\n     main   = \"Uniform(0, 10), n = 100\")\n\nThe bars are roughly level across the range because every value between 0 and 10 is equally likely. With only 100 draws the sampling noise is still obvious."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#sample-size-and-shape",
+    "href": "Week1-GettingStartedwR.html#sample-size-and-shape",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Sample Size and Shape",
+    "text": "Sample Size and Shape\n\n\n\n\n\n\n\nExercise 3\n\n\nRun the code, then change the four sample sizes and re-run. How does the histogram shape change as n grows?\n\n\n\n\n\nset.seed(2026)\npar(mfrow = c(2, 2))\n\nfor (n in c(50, 250, 500, 5000)) {\n  x &lt;- runif(n = n, min = 0, max = 10)\n  hist(x, main = paste(\"n =\", n), xlab = \"Value\",\n       col = \"#DFD1A7\", border = \"#333333\")\n}\n\npar(mfrow = c(1, 1))\n\n\n\n\n\n\n\n\nSolution\n\n\nset.seed(2026)\npar(mfrow = c(2, 2))\nfor (n in c(50, 250, 500, 5000)) {\n  x &lt;- runif(n = n, min = 0, max = 10)\n  hist(x, main = paste(\"n =\", n), xlab = \"Value\",\n       col = \"#DFD1A7\", border = \"#333333\")\n}\npar(mfrow = c(1, 1))\nAs n grows the bars flatten out toward the true uniform density. Small samples look lumpy purely by chance — a useful reminder when you interpret a histogram of 30 field measurements."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#normal-distribution",
+    "href": "Week1-GettingStartedwR.html#normal-distribution",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Normal Distribution",
+    "text": "Normal Distribution\nrnorm() takes a sample size, a mean, and a standard deviation.\n\nset.seed(2026)\nx_norm &lt;- rnorm(n = 100, mean = 0, sd = 1)\n\nsummary(x_norm)\nround(c(mean = mean(x_norm), sd = sd(x_norm)), 3)\n\n\nAre the sample mean and standard deviation exactly 0 and 1? Why not?"
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#density-mean-and-interval",
+    "href": "Week1-GettingStartedwR.html#density-mean-and-interval",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Density, Mean, and Interval",
+    "text": "Density, Mean, and Interval\n\nset.seed(2026)\nx_norm &lt;- rnorm(n = 100, mean = 0, sd = 1)\n\nplot(density(x_norm),\n     lwd = 3,\n     col = \"#333333\",\n     main = \"Normal(0, 1),\n     n = 100\",\n     xlab = \"Value\")\n\nabline(v = mean(x_norm), lwd = 3, col = \"#70002E\")\n\nci &lt;- quantile(x_norm, probs = c(0.025, 0.975))\nabline(v = ci, lwd = 2, lty = 2, col = \"#70002E\")\n\nlegend(\"topright\",\n       bty = \"n\",\n       legend = c(\"Density\", \"Mean\", \"95% interval\"),\n       col = c(\"#333333\", \"#70002E\", \"#70002E\"),\n       lty = c(1, 1, 2),\n       lwd = c(3, 3, 2))\n\nThe solid maroon line marks the sample mean near zero; the dashed lines mark the 2.5th and 97.5th percentiles, roughly symmetric around it."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#histogram-and-density-together",
+    "href": "Week1-GettingStartedwR.html#histogram-and-density-together",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Histogram and Density Together",
+    "text": "Histogram and Density Together\n\nset.seed(2026)\nx_norm &lt;- rnorm(n = 100, mean = 0, sd = 1)\n\nhist(x_norm, \n     probability = TRUE,\n     col = \"#EFE8D4\",\n     border = \"#333333\",\n     xlab = \"Value\", \n     main = \"\")\nlines(density(x_norm), col = \"#70002E\", lwd = 4)\n\n\n\n\n\n\n\nNote\n\n\nprobability = TRUE plots density rather than frequency, so the histogram and the smooth curve share a vertical scale. With probability = FALSE (the default) the curve would be flat against the axis."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#comparing-two-distributions",
+    "href": "Week1-GettingStartedwR.html#comparing-two-distributions",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Comparing Two Distributions",
+    "text": "Comparing Two Distributions\n\nset.seed(2026)\nx1 &lt;- rnorm(1000, mean = 25, sd = 5)   # adults\nx2 &lt;- rnorm(1000, mean = 15, sd = 2)   # juveniles\n\npar(mfrow = c(1, 2))\n\nplot(density(x1),\n     col = \"#70002E\",\n     lwd = 4,\n     lty = 1,\n     xlim = c(5, 45), \n     ylim = c(0, 0.30),\n     main = \"Kernel densities\", \n     xlab = \"Mass (kg)\")\nlines(density(x2), col = \"#1D3C34\", lwd = 4, lty = 2)\nlegend(\"topright\",\n       bty = \"n\",\n       legend = c(\"Adult\", \"Juvenile\"),\n       col = c(\"#70002E\", \"#1D3C34\"),\n       lty = c(1, 2),\n       lwd = 4)\n\nmass &lt;- rbind(data.frame(x = x1, stage = \"Adult\"),\n              data.frame(x = x2, stage = \"Juvenile\"))\nboxplot(x ~ stage, \n        data = mass, \n        col = c(\"#DFD1A7\", \"#BBDDE6\"),\n        ylab = \"Mass (kg)\",\n        xlab = \"\",\n        main = \"Box-and-whisker\")\n\npar(mfrow = c(1, 1))\n\nAdults centre near 25 kg with a wide spread; juveniles centre near 15 kg and are much tighter. Line type distinguishes the two curves as well as colour."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#poisson-distribution",
+    "href": "Week1-GettingStartedwR.html#poisson-distribution",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Poisson Distribution",
+    "text": "Poisson Distribution\nCount data are often modelled as Poisson. It has a single parameter, the mean count λ (lambda).\n\nset.seed(2026)\nx_pois &lt;- rpois(n = 250, lambda = 3.3)\n\ntable(x_pois)\nhist(x_pois, \n     probability = TRUE,\n     breaks = seq(-0.5, max(x_pois) + 0.5, 1),\n     col = \"#DFD1A7\",\n     border = \"#333333\",\n     xlab = \"Count\", \n     main = \"Poisson(lambda = 3.3)\")\n\n\n\n\n\n\n\nNote\n\n\nFor a Poisson, the variance equals the mean. Real count data are often overdispersed, i.e., more variable and that is when negative binomial models are useful."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#your-turn-three-values-of-lambda",
+    "href": "Week1-GettingStartedwR.html#your-turn-three-values-of-lambda",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Your Turn: Three Values of Lambda",
+    "text": "Your Turn: Three Values of Lambda\n\n\n\n\n\n\n\nExercise 4\n\n\nRun the code, then change the three values of λ. At what point does the distribution stop looking skewed?\n\n\n\n\n\nset.seed(2026)\npar(mfrow = c(1, 3))\n\nfor (m in c(1, 5, 15)) {\n  x &lt;- rpois(250, lambda = m)\n  hist(x, \n       main = paste(\"lambda =\", m),\n       xlab = \"Count\",\n       probability = TRUE,\n       col = \"#DFD1A7\",\n       border = \"#333333\")\n}\n\npar(mfrow = c(1, 1))\n\n\n\n\n\n\n\n\nSolution\n\n\nset.seed(2026)\npar(mfrow = c(1, 3))\nfor (m in c(1, 5, 15)) {\n  x &lt;- rpois(250, lambda = m)\n  hist(x, \n  main = paste(\"lambda =\", m),\n  xlab = \"Count\",\n  probability = TRUE, \n  col = \"#DFD1A7\", \n  border = \"#333333\")\n}\npar(mfrow = c(1, 1))\nAt λ = 1 the distribution is strongly right-skewed and piles up at zero. By λ = 15 it is nearly symmetric — Poisson approaches normal as λ grows."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#binomial-and-bernoulli",
+    "href": "Week1-GettingStartedwR.html#binomial-and-bernoulli",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Binomial and Bernoulli",
+    "text": "Binomial and Bernoulli\nThe binomial arises when repeated trials have binary outcome. rbinom() takes the number of observations, trials per observation, and probability of success.\n\nset.seed(2026)\n\n# 10 observations, each of 5 trials, p = 0.25\nx_binom &lt;- rbinom(n = 10, size = 5, prob = 0.25)\nx_binom\n\n# Bernoulli: a single trial per observation\nx_bern &lt;- rbinom(n = 20, size = 1, prob = 0.35)\nx_bern\n\nbarplot(table(factor(x_bern, levels = c(0, 1),\n                     labels = c(\"Failure\", \"Success\"))),\n        col = c(\"#DFD1A7\", \"#70002E\"),\n        xlab = \"Outcome\", ylab = \"Number of cases\")\n\n\n\n\n\n\n\nNote\n\n\nThis is the detection process behind occupancy models: each camera visit is a Bernoulli trial with detection probability p, and the number of visits with a detection out of K visits is binomial."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#base-plotting-functions",
+    "href": "Week1-GettingStartedwR.html#base-plotting-functions",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Base Plotting Functions",
+    "text": "Base Plotting Functions\n\nplot(x, y) : scatter, line, or formula plots\nhist(x) : distribution of one variable\nboxplot(y ~ group) : distribution across groups\nbarplot(height) : tallies and totals\npairs(df) : all pairwise scatterplots, for spotting collinearity among predictors\n\nAdd-on packages include ggplot2 and lattice. We use base graphics here because terra and sf both plug straight into it."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#a-first-plot",
+    "href": "Week1-GettingStartedwR.html#a-first-plot",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "A First Plot",
+    "text": "A First Plot\n\nset.seed(591)\nsp  &lt;- c(\"Elk\", \"Mule Deer\", \"Black Bear\", \"Steller's Jay\", \"Clark's Nutcracker\")\ncls &lt;- c(\"Mammal\", \"Mammal\", \"Mammal\", \"Bird\", \"Bird\")\ncamera &lt;- expand.grid(site_id = sprintf(\"S%02d\", 1:20),\n                      week = 1:8,\n                      species = sp,\n                      stringsAsFactors = FALSE)\ncamera$class &lt;- cls[match(camera$species, sp)]\ncamera$count &lt;- rpois(nrow(camera),\n                      lambda = ifelse(camera$class == \"Bird\", 2.5, 1.2))\nwk &lt;- aggregate(count ~ week, data = camera, FUN = sum)\nwk\n\nplot(count ~ week, data = wk)\n\nThe default plot is functional but can be customized, shown next."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#controlling-the-plot",
+    "href": "Week1-GettingStartedwR.html#controlling-the-plot",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Controlling the Plot",
+    "text": "Controlling the Plot\n\nwk &lt;- aggregate(count ~ week, data = camera, FUN = sum)\n\nplot(count ~ week,\n     data = wk,\n     type  = \"l\", lty = 2, lwd = 2, col = \"#767676\",\n     axes  = FALSE, frame = FALSE,\n     xlim  = c(0.5, 8.5),\n     ylim  = c(0, max(wk$count) + 40),\n     xaxs  = \"i\", yaxs = \"i\",\n     xlab  = \"Survey week\",\n     ylab  = \"Total detections\")\n\naxis(1, at = 1:8, labels = 1:8, las = 1, lwd = 2)\naxis(2, at = seq(0, max(wk$count) + 40, 40), las = 1, lwd = 2)\n\npoints(count ~ week, data = wk, pch = 19, cex = 1.4, col = \"#70002E\")\n\nDetections stay roughly the same across the eight weeks, as they should. The simulation used the same λ every week."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#two-groups-on-one-plot",
+    "href": "Week1-GettingStartedwR.html#two-groups-on-one-plot",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Two Groups on One Plot",
+    "text": "Two Groups on One Plot\n\nwk_cls &lt;- aggregate(count ~ week + class, data = camera, FUN = sum)\n\nmam &lt;- wk_cls[wk_cls$class == \"Mammal\", ]\navs &lt;- wk_cls[wk_cls$class == \"Bird\", ]\n\nplot(count ~ week, data = mam,\n     pch = 19, cex = 1.5, col = \"#70002E\", type = \"b\", lwd = 2, lty = 1,\n     ylim = c(0, max(wk_cls$count) + 20),\n     xlab = \"Survey week\", ylab = \"Total detections\")\n\npoints(count ~ week, data = avs,\n       pch = 17, cex = 1.5, col = \"#1D3C34\", type = \"b\", lwd = 2, lty = 2)\n\nlegend(\"topright\", bty = \"n\",\n       legend = c(\"Mammals\", \"Birds\"),\n       pch = c(19, 17), lty = c(1, 2), lwd = 2,\n       col = c(\"#70002E\", \"#1D3C34\"))\n\n\n\n\n\n\n\n\nDesign note\n\n\nThe two series differ by colour, point shape, and line type. Redundant encoding keeps the figure readable in greyscale and for colour-blind readers."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#bar-plots-of-totals",
+    "href": "Week1-GettingStartedwR.html#bar-plots-of-totals",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Bar Plots of Totals",
+    "text": "Bar Plots of Totals\n\ntot &lt;- tapply(camera$count, camera$species, sum)\ntot &lt;- sort(tot, decreasing = TRUE)\n\npar(mar = c(9, 5, 2, 1))\nbarplot(tot,\n        col       = \"#70002E\",\n        density   = seq(20, 60, length.out = length(tot)),\n        ylab      = \"Total detections\",\n        las       = 2,\n        cex.names = 0.9)\npar(mar = c(5, 4, 4, 2) + 0.1)"
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#small-multiples",
+    "href": "Week1-GettingStartedwR.html#small-multiples",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Small Multiples",
+    "text": "Small Multiples\n\nsp_list &lt;- unique(camera$species)\nwk_sp   &lt;- aggregate(count ~ week + species, data = camera, FUN = sum)\n\npar(mfrow = c(2, 3), mar = c(4, 4, 3, 1))\n\nfor (s in sp_list) {\n  d &lt;- wk_sp[wk_sp$species == s, ]\n  plot(count ~ week, data = d,\n       type = \"h\", lwd = 8, lend = 1, col = \"#1D3C34\",\n       ylim = c(0, max(wk_sp$count)),\n       main = s, cex.main = 0.95,\n       xlab = \"Week\", ylab = \"Detections\")\n}\n\npar(mfrow = c(1, 1), mar = c(5, 4, 4, 2) + 0.1)\n\nShared axis limits across panels are what make small multiples comparable. Drop ylim and each panel rescales, which hides the real differences between species."
+  },
+  {
+    "objectID": "Week1-GettingStartedwR.html#your-turn-build-a-figure",
+    "href": "Week1-GettingStartedwR.html#your-turn-build-a-figure",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Your Turn: Build a Figure",
+    "text": "Your Turn: Build a Figure\n\n\n\n\n\n\n\nExercise 5\n\n\nRun the code, then swap class for species in the formula. You will need las = 2 to keep the labels readable.\n\n\n\n\n\nset.seed(591)\nsp  &lt;- c(\"Elk\", \"Mule Deer\", \"Black Bear\", \"Steller's Jay\", \"Clark's Nutcracker\")\ncls &lt;- c(\"Mammal\", \"Mammal\", \"Mammal\", \"Bird\", \"Bird\")\ncamera &lt;- expand.grid(site_id = sprintf(\"S%02d\", 1:20),\n                      week = 1:8,\n                      species = sp, \n                      stringsAsFactors = FALSE)\ncamera$class &lt;- cls[match(camera$species, sp)]\ncamera$count &lt;- rpois(nrow(camera), lambda = ifelse(camera$class == \"Bird\", 2.5, 1.2))\n\nboxplot(count ~ class, data = camera,\n        col  = c(\"#BBDDE6\", \"#DFD1A7\"),\n        xlab = \"Class\",\n        ylab = \"Detections per survey\")\n\n\n\n\n\n\n\n\nHint\n\n\nThe formula reads response ~ grouping variable. The response is what you measured; the grouping variable is what splits the boxes.\n\n\n\n\n\n\n\n\n\n\n\nSolution\n\n\nboxplot(count ~ class, \n        data = camera,\n        col  = c(\"#BBDDE6\", \"#DFD1A7\"),\n        xlab = \"Class\",\n        ylab = \"Detections per survey\")\nBirds sit higher because the simulation used λ = 2.5 for birds and λ = 1.2 for mammals."
+  },
+  {
+    "objectID": "Week1-RSpatial.html",
+    "href": "Week1-RSpatial.html",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "",
+    "text": "R.version.string"
+  }
+]
