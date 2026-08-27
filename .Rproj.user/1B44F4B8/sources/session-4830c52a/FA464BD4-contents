@@ -24,7 +24,7 @@ title-slide-attributes:
 
 {{< include ./_extensions/r-wasm/live/_knitr.qmd >}}
 
-```{webr}
+```{r}
 R.version.string
 ```
 
@@ -69,7 +69,7 @@ Note that sf and terra have replaced the older sp and raster packages; sp was re
 
 If you see the numbers 1 through 5 squared, everything is working.
 
-```{webr}
+```{r}
 for (x in 1:5) {
   print(x^2)
 }
@@ -85,7 +85,7 @@ for (x in 1:5) {
 
 - To view documentation for any loaded function, use `help()` or `?`:
 
-```{webr}
+```{r}
 ?runif
 help(runif)
 ```
@@ -96,7 +96,7 @@ help(runif)
 - The elephant in the room: GenAI
 
 ::: notes
-In R you never have to memorise code. Help pages document the expected inputs (arguments) and the returned value. In webR the help page prints as plain text rather than opening a formatted panel.
+In R you never have to memorise code. Help pages document the expected inputs (arguments) and the returned value. In r the help page prints as plain text rather than opening a formatted panel.
 :::
 
 # Spatial Data in R
@@ -142,7 +142,7 @@ A hypothetical 12 × 12 km study area in **UTM zone 12N (EPSG:32612)**, the proj
 
 ## Building Points from Scratch
 
-```{webr}
+```{r}
 library(sf)
 set.seed(591)
 
@@ -168,7 +168,7 @@ stations
 
 ## Inspecting Geometry and CRS
 
-```{webr}
+```{r}
 class(stations)
 sf::st_geometry_type(stations)[1]
 nrow(stations)
@@ -182,7 +182,7 @@ crs_info$units             # coordinate units
 
 ## Plotting Points
 
-```{webr}
+```{r}
 plot(sf::st_geometry(stations),
      pch  = 19, cex = 1.3, col = "#70002E",
      axes = TRUE,
@@ -199,7 +199,7 @@ Twenty-five stations scattered across the 12 × 12 km study area. Axis values ar
 
 ## Reprojecting
 
-```{webr}
+```{r}
 stations_ll <- sf::st_transform(stations, crs = 4326)
 
 sf::st_crs(stations_ll)$epsg
@@ -215,7 +215,7 @@ head(round(sf::st_coordinates(stations), 1), 3)
 
 ## Building a Polygon
 
-```{webr}
+```{r}
 poly_coords <- matrix(c(282000, 5182000,
                         289000, 5182500,
                         290000, 5188000,
@@ -245,7 +245,7 @@ The shaded polygon covers roughly 50 km². Maroon dots are the survey stations; 
 
 Which stations fall inside the wilderness unit?
 
-```{webr}
+```{r}
 hits <- lengths(sf::st_intersects(stations, reserve)) > 0
 
 table(hits)
@@ -274,7 +274,7 @@ legend("topleft",
 
 ## Distances Between Points
 
-```{webr}
+```{r}
 d <- sf::st_distance(stations)                       # 25 x 25 matrix, with units
 dm <- matrix(as.numeric(d), nrow = nrow(stations))
 diag(dm) <- NA                                   # ignore each point's distance to itself
@@ -295,7 +295,7 @@ Most stations sit within about 1–2 km of their closest neighbour. If you were 
 
 ## Buffers, Union, and Hull
 
-```{webr}
+```{r}
 buf  <- sf::st_buffer(stations, dist = 1000)   # 1 km around each station
 core <- sf::st_union(buf)                      # dissolve overlaps into one shape
 hull <- sf::st_convex_hull(sf::st_union(stations)) # smallest convex polygon containing all points
@@ -317,7 +317,7 @@ The dashed green outline is the convex hull of the array; the pale blue shape is
 
 ## Lines and Distance to Water
 
-```{webr}
+```{r}
 stream_coords <- matrix(c(280500, 5183000,
                           284000, 5185500,
                           287500, 5186500,
@@ -360,7 +360,7 @@ The blue line is the simulated stream. Dark points sit closest to water, light p
 
 ## Reading and Writing Vector Files
 
-```{webr}
+```{r}
 sf::st_write(stations, "stations.geojson", delete_dsn = TRUE, quiet = TRUE)
 list.files(pattern = "geojson")
 
@@ -382,7 +382,7 @@ names(stations2)
 Run the cell, then change the buffer width. How wide does the corridor have to be before half the stations fall inside?
 :::
 
-```{webr}
+```{r}
 library(sf)
 set.seed(591)
 n <- 25
@@ -764,7 +764,7 @@ freq(suitable)                                      #<3>
 
 <!-- ## Step 1: The True Surface -->
 
-<!-- ```{webr, echo=TRUE} -->
+<!-- ```{r, echo=TRUE} -->
 
 <!-- # Standardise covariates so coefficients are interpretable -->
 
@@ -794,7 +794,7 @@ freq(suitable)                                      #<3>
 
 <!-- ## Step 2: Simulate a Field Survey -->
 
-<!-- ```{webr, echo=TRUE} -->
+<!-- ```{r, echo=TRUE} -->
 
 <!-- set.seed(2026) -->
 
@@ -826,7 +826,7 @@ freq(suitable)                                      #<3>
 
 <!-- ## Step 3: Fit and Compare -->
 
-<!-- ```{webr, echo=TRUE} -->
+<!-- ```{r, echo=TRUE} -->
 
 <!-- fit <- glm(occupied ~ z_elev + z_dist, data = dat, family = binomial) -->
 
@@ -846,7 +846,7 @@ freq(suitable)                                      #<3>
 
 <!-- ## Step 4: Predict Across the Map -->
 
-<!-- ```{webr, echo=TRUE} -->
+<!-- ```{r, echo=TRUE} -->
 
 <!-- b     <- coef(fit) -->
 
@@ -888,7 +888,7 @@ freq(suitable)                                      #<3>
 
 <!-- ::: -->
 
-<!-- ```{webr, echo=TRUE} -->
+<!-- ```{r, echo=TRUE} -->
 
 <!-- library(terra) -->
 
