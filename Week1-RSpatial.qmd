@@ -113,7 +113,7 @@ A CRS tells R where on Earth your coordinates sit and what the units mean. Layer
 
 ## Old and New Package Names
 
-| Task              | Modern (use this)    | Legacy (retired)          |
+| Task              | Use this    | Retired          |
 |-------------------|----------------------|---------------------------|
 | Vector class      | `sf` object          | `sp::SpatialPoints*`      |
 | Read vector file  | `sf::st_read()`      | `rgdal::readOGR()`        |

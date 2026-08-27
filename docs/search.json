@@ -578,7 +578,7 @@
     "href": "Week1-RSpatial.html#old-and-new-package-names",
     "title": "WILD 591 – Spatial Population Modeling",
     "section": "Old and New Package Names",
-    "text": "Old and New Package Names\n\n\n\nTask\nModern (use this)\nLegacy (retired)\n\n\n\n\nVector class\nsf object\nsp::SpatialPoints*\n\n\nRead vector file\nsf::st_read()\nrgdal::readOGR()\n\n\nReproject vector\nsf::st_transform()\nsp::spTransform()\n\n\nRaster class\nterra::SpatRaster\nraster::RasterLayer\n\n\nRead raster file\nterra::rast()\nraster::raster()\n\n\nReproject raster\nterra::project()\nraster::projectRaster()\n\n\nExtract at points\nterra::extract()\nraster::extract()\n\n\n\n\nsp, rgdal, rgeos, and maptools were all retired in October 2023. Any tutorial that leads with readOGR() predates that and will not run on a current install."
+    "text": "Old and New Package Names\n\n\n\nTask\nUse this\nRetired\n\n\n\n\nVector class\nsf object\nsp::SpatialPoints*\n\n\nRead vector file\nsf::st_read()\nrgdal::readOGR()\n\n\nReproject vector\nsf::st_transform()\nsp::spTransform()\n\n\nRaster class\nterra::SpatRaster\nraster::RasterLayer\n\n\nRead raster file\nterra::rast()\nraster::raster()\n\n\nReproject raster\nterra::project()\nraster::projectRaster()\n\n\nExtract at points\nterra::extract()\nraster::extract()\n\n\n\n\nsp, rgdal, rgeos, and maptools were all retired in October 2023. Any tutorial that leads with readOGR() predates that and will not run on a current install."
   },
   {
     "objectID": "Week1-RSpatial.html#our-simulated-study-area",
