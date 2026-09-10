@@ -1,0 +1,247 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "WILD 591 — Spatial Population Modeling",
+    "section": "",
+    "text": "Each lesson is a set of slides with live R code. You do not need R or RStudio installed to try the examples. Edit any code block and press Run Code to see the results. That said, I recommend you to install R and RStudio and follow the material on your computer."
+  },
+  {
+    "objectID": "index.html#lessons",
+    "href": "index.html#lessons",
+    "title": "WILD 591 — Spatial Population Modeling",
+    "section": "Lessons",
+    "text": "Lessons\nGetting Started with R\nLesson 1: Introduction\nR for Spatial Analysis\nLesson 2: Spatial Patterns\nR Lab: Generalized Linear Models\nLesson 4: Scale of Effect\nLesson 4: Scale of Effect\n\n\n\n\n\n\nTipNavigating the slides\n\n\n\nUse the arrow keys or the on-screen controls to move between slides."
+  },
+  {
+    "objectID": "index.html#getting-help",
+    "href": "index.html#getting-help",
+    "title": "WILD 591 — Spatial Population Modeling",
+    "section": "Getting help",
+    "text": "Getting help\nIf a code block did not run, try reloading the page since the browser occasionally drops the R engine after being idle for long."
+  },
+  {
+    "objectID": "Week3-glm.html",
+    "href": "Week3-glm.html",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "",
+    "text": "General Linear regression\nGeneralized Linear regression\nPractice"
+  },
+  {
+    "objectID": "Week3-glm.html#outline",
+    "href": "Week3-glm.html#outline",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "",
+    "text": "General Linear regression\nGeneralized Linear regression\nPractice"
+  },
+  {
+    "objectID": "Week3-glm.html#why-use-glm",
+    "href": "Week3-glm.html#why-use-glm",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Why use GLM?",
+    "text": "Why use GLM?\nA linear model describes the relationship between a response and explanatory variable(s), assuming:\n\n\n\nThe model makes biological sense\nIndependence of errors (blocking, mixed effects models later)\nHomoscedasticity — equal variance of errors\nNormality of errors\n\n\\[y = b_0   \\times X_0 + b_1    \\times X_1 + b_2    \\times X_2 + \\ldots\\]"
+  },
+  {
+    "objectID": "Week3-glm.html#what-is-a-glm",
+    "href": "Week3-glm.html#what-is-a-glm",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "What is a GLM?",
+    "text": "What is a GLM?\nIn a Gaussian linear model, the expected values are:\n\n\n\\[\\mu = X \\beta\\]\nand the errors follow a normal distribution:\n\\[y \\sim    {Normal}(\\mu, \\sigma)\\]\n\n\n\n\n\n\nNote\n\n\n\nBut are the errors always normal? What if our response is a count, a proportion, or presence/absence?"
+  },
+  {
+    "objectID": "Week3-glm.html#model-structure",
+    "href": "Week3-glm.html#model-structure",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Model structure",
+    "text": "Model structure\nStatistical models describe:\n\nSystematic pattern in a random variable (response), possibly as a function of covariates\nRandom (unexplained) variability around the mean:\n\nResponse = systematic + random\n\n\n\n\n\n\nNote\n\n\n\nother pairs of terms: deterministic + stochastic, or mean + dispersion structure of model"
+  },
+  {
+    "objectID": "Week3-glm.html#key-elements-of-a-model",
+    "href": "Week3-glm.html#key-elements-of-a-model",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Key elements of a model",
+    "text": "Key elements of a model\n\n\nDeterministic process:\n\n\nStochastic process:\n\n\n\n\nWhy do we need both? Deterministic part is a mathematical model of a process while stochastic part is a statistical model of data that arise from the process."
+  },
+  {
+    "objectID": "Week3-glm.html#basic-regression-model",
+    "href": "Week3-glm.html#basic-regression-model",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Basic regression model",
+    "text": "Basic regression model\nDeterministic process: What biological process underlies the pattern in my data?\nStochastic process: What probabilistic process produces the values of my data?\n\\[y_i = \\beta_0 + \\beta_1 x_i + \\epsilon_i, \\qquad \\epsilon_i \\sim  {Normal}(0, \\sigma^2)\\]\nis exactly the same as:\n\\[\\mu_i = \\beta_0 + \\beta_1 x_i, \\qquad y_i \\sim    {Normal}(\\mu_i, \\sigma^2)\\]\n\nWhat if the errors aren’t normal?"
+  },
+  {
+    "objectID": "Week3-glm.html#common-error-distributions",
+    "href": "Week3-glm.html#common-error-distributions",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Common error distributions",
+    "text": "Common error distributions\n\n\n\n\n\n\n\nThe family for the errors can be: Gaussian for normally distributed data\n\nOther example error distributions include:\n\n\n\nPoisson for count data\nBinomial for success/failure data\nBernoulli for presence/absence"
+  },
+  {
+    "objectID": "Week3-glm.html#what-is-a-glm-1",
+    "href": "Week3-glm.html#what-is-a-glm-1",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "What is a GLM?",
+    "text": "What is a GLM?\nA GLM uses a link function \\(L\\) to describe the relationship between the mean response and the predictor:\n\\[L(E(y)) = \\beta_0 + \\beta_1 x\\]"
+  },
+  {
+    "objectID": "Week3-glm.html#linear-regression",
+    "href": "Week3-glm.html#linear-regression",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Linear regression",
+    "text": "Linear regression\n\\[E(y) = \\beta_0 + \\beta_1 x_1 + ... + \\beta_n x_n\\]\n\n\nThe link is called ”identity”\nProduces μ on range (−∞, ∞)\nPossibility to add interaction effects (e.g., \\(\\beta_3 x_1 x_2\\)) and curvilinear effects (e.g., \\(\\beta_4 x_1^3\\) )\nWhen should we not use a linear model?\n– Simple linear models produce continuous predictions across the range of all real numbers\n– Equations must provide predictions matched to the biological quantities we wish to understand"
+  },
+  {
+    "objectID": "Week3-glm.html#intercept-only-model-simulate-data",
+    "href": "Week3-glm.html#intercept-only-model-simulate-data",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Intercept-only model: simulate data",
+    "text": "Intercept-only model: simulate data\nLet’s simulate observations as 1000 samples of body mass measurements of male peregrines.\n\nrm(list = ls())\nset.seed(1)\ny1000 &lt;- rnorm(n = 1000, mean = 600, sd = 30)\ntruth &lt;- c(mean = 600, sd = 30)\nhist(y1000, col = \"grey\",\n     xlim = c(450, 750),\n     xlab = \"Body mass (g) of 1000 male peregrines\",\n     main = \"\")"
+  },
+  {
+    "objectID": "Week3-glm.html#intercept-only-frequentist",
+    "href": "Week3-glm.html#intercept-only-frequentist",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Intercept-only: frequentist",
+    "text": "Intercept-only: frequentist\nAs we did last week, we can analyse these data using canned software. There are R packages to fit linear models using frequentist inference methods (e.g., lm() or glm() from stats package), or Bayesian inference (e.g., brms package).\n\nlm1   &lt;- stats::lm(y1000 ~ 1)\nc(coef(lm1), sigma = sigma(lm1))\ntruth"
+  },
+  {
+    "objectID": "Week3-glm.html#intercept-only-bayesian",
+    "href": "Week3-glm.html#intercept-only-bayesian",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Intercept-only: Bayesian",
+    "text": "Intercept-only: Bayesian\nWe could also use general-purpose software to fit models. In this lesson, you will see how to fit linear models using R package ”nimble”. When we use R packages, we need to learn the syntax and provide the required input and format. First, make sure the required packages are installed and loaded into R. Second, bundle data in a list. Third, write the Nimble model in BUGS language.\n\nlibrary(nimble) # model fitting\nlibrary(coda)   # output processing\n\nlist_data &lt;- list(mass = y1000, n = length(y1000))\n\nmodel_1 &lt;- nimbleCode({\n  # Likelihood\n  for (i in 1:n) {\n    mass[i] ~ dnorm(mean = pop_mean, sd = pop_sd)\n  }\n  # Priors\n  pop_mean ~ dunif(0, 5000)\n  pop_sd   ~ dunif(0, 100)\n})"
+  },
+  {
+    "objectID": "Week3-glm.html#intercept-only-bayesian-1",
+    "href": "Week3-glm.html#intercept-only-bayesian-1",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Intercept-only: Bayesian",
+    "text": "Intercept-only: Bayesian\nWe use Markov Chain Monte Carlo simulations to draw samples from the posterior distribution of our parameters of interest. For this, we need additional input, including starting values for MCMC chains, parameters we want monitored, and MCMC settings.\n\ninits  &lt;- list(pop_mean = rnorm(1, 600), pop_sd = runif(1, 1, 30))\nparams &lt;- c(\"pop_mean\", \"pop_sd\")\nni &lt;- 3000; nb &lt;- 1000; nc &lt;- 4; nt &lt;- 1"
+  },
+  {
+    "objectID": "Week3-glm.html#intercept-only-bayesian-2",
+    "href": "Week3-glm.html#intercept-only-bayesian-2",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Intercept-only: Bayesian",
+    "text": "Intercept-only: Bayesian\nWe generated starting values and saved them in a list, saved a vector of the parameter names, and finally, determined how many MCMC chains and iterations we need, how many samples to keep, and how many samples to discard. Now, we can fit this model:\n\nout1 &lt;- nimbleMCMC(code      = model_1, \n                   constants = list_data,\n                   inits     = inits,\n                   monitors  = params,\n                   nburnin   = nb,\n                   niter     = ni, \n                   thin      = nt,\n                   nchains   = nc,\n                   summary   = TRUE,\n                  samplesAsCodaMCMC = TRUE)"
+  },
+  {
+    "objectID": "Week3-glm.html#intercept-only-bayesian-3",
+    "href": "Week3-glm.html#intercept-only-bayesian-3",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Intercept-only: Bayesian",
+    "text": "Intercept-only: Bayesian\nThe model output will be a list. To show its contents we could use lapply(), as shown below. You should always inspect the model outputs.\n\nlapply(out1, head)\npar(mfrow = c(1, 2))\ncoda::traceplot(out1$samples)\nout1$summary$all.chains # Posterior summaries from all 4 chains"
+  },
+  {
+    "objectID": "Week3-glm.html#linear-regression-with-covariate-simulate-data",
+    "href": "Week3-glm.html#linear-regression-with-covariate-simulate-data",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Linear regression with covariate: simulate data",
+    "text": "Linear regression with covariate: simulate data\nLet’s generate some data, including a response (body mass measurements of male peregrines during cold months) and a continuous covariate, e.g., temperature in Celsius.\n\nset.seed(1)\ntruth &lt;- c(a = 600, b = -0.5, mean = 0, sd = 10)\nx   &lt;- runif(1000, 1, 10)\neps &lt;- rnorm(length(x), truth[\"mean\"], truth[\"sd\"])\ny   &lt;- truth[\"a\"] + truth[\"b\"] * x + eps\nplot(y ~ x, pch = 19, col = \"grey\")\n\n\nNote that we do not measure eps in reality; we measure x.\nVisualizing the resulting data in this example is similar to visualizing the data you collected in the field (y) in addition to your explanatory variable (x)."
+  },
+  {
+    "objectID": "Week3-glm.html#linear-regression-with-covariate-frequentist",
+    "href": "Week3-glm.html#linear-regression-with-covariate-frequentist",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Linear regression with covariate: frequentist",
+    "text": "Linear regression with covariate: frequentist\nLet’s use the same function as before to fit the regression line that describes the relationship between response and explanatory variables.\n\nlm2   &lt;- stats::lm(y ~ x)\nsummary(lm2)\nplot(y ~ x, pch = 19, col = \"grey\")\nabline(lm2, col = \"red\", lwd = 2)\n# show the residuals\nfit &lt;- predict(lm2)\nsegments(x, fit, x, fit + residuals(lm2))"
+  },
+  {
+    "objectID": "Week3-glm.html#linear-regression-with-covariate-bayesian",
+    "href": "Week3-glm.html#linear-regression-with-covariate-bayesian",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Linear regression with covariate: Bayesian",
+    "text": "Linear regression with covariate: Bayesian\nAs before, we need to bundle data in a list and write the nimble model in BUGS language. We generate starting values and save them in a list, save a vector of the parameter names, and finally, determine how many MCMC chains and iterations we need, how many samples to keep, and how many samples to discard.\n\nlist_data &lt;- list(mass = y, n = length(y), temp = x)\n\nmodel_2 &lt;- nimbleCode({\n  # Likelihood\n  for (i in 1:n) {\n    # Response y distributed normally\n    mass[i] ~ dnorm(mu[i], sd = sd)\n    # Linear predictor\n    mu[i]   &lt;- a + b * temp[i]\n  }\n  # Priors\n  a  ~ dunif(0, 5000)\n  b  ~ dnorm(0, 0.001)\n  sd ~ dunif(0, 100)\n})\n\ninits  &lt;- list(a = rnorm(1), b = rnorm(1), sd = runif(1, 1, 10))\nparams &lt;- c(\"a\", \"b\", \"sd\")\nni &lt;- 4000; nb &lt;- 2000; nc &lt;- 4; nt &lt;- 1\n# Model fitting\nout2 &lt;- nimbleMCMC(code      = model_2,\n                   constants = list_data,\n                   inits     = inits,\n                   monitors  = params,\n                   nburnin   = nb,\n                   niter     = ni,\n                   thin      = nt,\n                   nchains   = nc,\n                   summary   = TRUE,\n                   samplesAsCodaMCMC = TRUE\n)\nout2$summary$all.chains"
+  },
+  {
+    "objectID": "Week3-glm.html#linear-regression-with-covariate-frequentist-1",
+    "href": "Week3-glm.html#linear-regression-with-covariate-frequentist-1",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Linear regression with covariate: frequentist",
+    "text": "Linear regression with covariate: frequentist\nWe can also use the glm() fucntion to fit the regression line.\n\nglm2  &lt;- stats::glm(y ~ x)         # identity link = same as lm()\nsummary(glm2)\nc(coef(glm2), sigma = sigma(glm2))\nplot(y ~ x, pch = 19, col = \"grey\")\nabline(glm2, col = \"red\", lwd = 2)\nfit &lt;- predict(glm2)\nsegments(x, fit, x, fit + residuals(glm2))\n\n\nThe default is “identity” link. What if the response is not continuous?"
+  },
+  {
+    "objectID": "Week3-glm.html#exponential-model",
+    "href": "Week3-glm.html#exponential-model",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Exponential model",
+    "text": "Exponential model\n\\[log(E(y)) = \\beta_0 + \\beta_1 x_1 + ... + \\beta_n x_n\\]\n\n\nModels quantities that are only positive\nProduces μ on range (0, ∞)\nPreserves the additive simplicity of linear\n“We used a log-transformed response variable”\n“We used a linear model with a log link”"
+  },
+  {
+    "objectID": "Week3-glm.html#poisson-glm-simulate-data",
+    "href": "Week3-glm.html#poisson-glm-simulate-data",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Poisson GLM: simulate data",
+    "text": "Poisson GLM: simulate data\nRelationships with count data as the response can be modeled using Poisson GLM. A logarithmic link is used between the expectation of the response (i.e., the mean count) and the predictor function (i.e., the combination of parameters on the right side of the regression equation). As a result, exponentiated coefficient estimates are the multiplicative effect on the count (response) of one unit increase in the predictor.\n\nset.seed(500)\nn           &lt;- 300\nhabitat     &lt;- factor(rep(c(\"forest\", \"grassland\"), each = n/2))\ntemperature &lt;- runif(n, -5, 25)\n\na &lt;- 1; b_hab &lt;- 1.5; b_temp &lt;- 0.1; b_temp2 &lt;- -0.005\ntruth &lt;- c(a = a, b_hab = b_hab, b_temp = b_temp, b_temp2 = b_temp2)\n\nlambda &lt;- exp(a +\n              b_hab  * (habitat == \"grassland\") +\n              b_temp  * temperature +\n              b_temp2 * temperature ^ 2)\nset.seed(300)\ncount  &lt;- rpois(n, lambda)\n\nplot(count ~ temperature,\n     col = habitat,\n     pch = 19,\n     cex = 0.6)\nlegend(\"topleft\",\n       legend = levels(habitat),\n       col = 1:2, \n       pch = 19,\n       bty = \"n\")"
+  },
+  {
+    "objectID": "Week3-glm.html#poisson-glm-frequentist",
+    "href": "Week3-glm.html#poisson-glm-frequentist",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Poisson GLM: frequentist",
+    "text": "Poisson GLM: frequentist\nWe can use glm() to fit a generalized linear model to count data by specifying the “poisson” link. Similar to a linear model, we can make predictions as below.\n\nglm3 &lt;- stats::glm(count ~ habitat + temperature + I(temperature^2),\n                       family = \"poisson\")\nsummary(glm3)\n\nnew_data &lt;- expand.grid(habitat = levels(habitat), temperature = -5:25)\nnew_data$fit &lt;- predict(glm3, newdata = new_data, type = \"response\")\nplot(count ~ temperature, col = habitat)\nfor(h in c(\"forest\",\"grassland\")) {\n  lines(fit ~ temperature,\n        new_data[new_data$habitat == h, ],\n        type = \"l\",\n        lwd = 2,\n        col = habitat)\n}\n\nfit &lt;- predict(glm3, type = \"response\")\nsegments(temperature,\n         fit,\n         temperature,\n         fit + residuals(glm3,\n                         type = \"response\"))"
+  },
+  {
+    "objectID": "Week3-glm.html#poisson-glm-bayesian",
+    "href": "Week3-glm.html#poisson-glm-bayesian",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Poisson GLM: Bayesian",
+    "text": "Poisson GLM: Bayesian\nWe can fit the same model using nimble():\n\n# Bundle data\nlist_data &lt;- list(count   = count,\n                  n       = length(count),\n                  habitat = as.numeric(habitat) - 1,\n                  temp    = temperature)\n# Model code\nmodel_2 &lt;- nimbleCode( {\n  # Likelihood\n  for(i in 1 : n) {\n    # Response y is from Poisson distribution\n    count[i] ~ dpois(lambda[i])\n    # Linear predictor\n    log(lambda[i]) &lt;- a +\n                      b_hab * habitat[i] +\n                      b_temp * temp[i] +\n                      b_temp2 * temp[i] ^ 2\n  }\n  # Priors\n  a ~ dunif(0, 10)\n  b_hab ~ dnorm(0, 0.001)\n  b_temp ~ dnorm(0, 0.001)\n  b_temp2 ~ dnorm(0, 0.001)\n} )\n# Initial values\ninits &lt;- list(a = rlnorm(1),\n              b_hab = rnorm(1),\n              b_temp = rnorm(1),\n              b_temp2 = rnorm(1))\n# Parameters monitored\nparams &lt;- c(\"a\", \"b_hab\", \"b_temp\", \"b_temp2\")\n# MCMC settings\nni &lt;- 10000 ; nb &lt;- 5000 ; nc &lt;- 4 ; nt &lt;- 1\n# Model fitting\nout2 &lt;- nimbleMCMC( code      = model_2,\n                    constants = list_data,\n                    inits     = inits,\n                    monitors  = params,\n                    nburnin   = nb,\n                    niter     = ni,\n                    thin      = nt,\n                    nchains   = nc,\n                    summary   = TRUE,\n                    samplesAsCodaMCMC = TRUE)"
+  },
+  {
+    "objectID": "Week3-glm.html#logistic-regression",
+    "href": "Week3-glm.html#logistic-regression",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Logistic regression",
+    "text": "Logistic regression\n\\[logit(E(y)) = \\beta_0 + \\beta_1 x_1 + ... + \\beta_n x_n\\]\n\n\nModels quantities that are proportions\nProduces μ on range (0, 1)\nPreserves the additive simplicity of linear\n“We used a linear model with a logit link”"
+  },
+  {
+    "objectID": "Week3-glm.html#logistic-regression-simulate-data",
+    "href": "Week3-glm.html#logistic-regression-simulate-data",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Logistic regression: simulate data",
+    "text": "Logistic regression: simulate data\nLet’s simulate a different response. When the response is a probability, a proportion, or a success/failure, we can fit logistic (or binomial) regression. Here we simulate data with a binary response (0/1) and two predictors, one continuous (age) and one categorical (sex). We then fit a logistic regression model and use it to make predictions.\n\nset.seed(2007)\nn   &lt;- 1000\nsex &lt;- factor(sample(c(\"F\", \"M\"), n, replace = TRUE, prob = c(0.3, 0.7)))\nage &lt;- runif(n, 0, 15)\n# Specify odd-ratios\nor_sex &lt;- 0.5; or_age &lt;- 1.3\ntruth  &lt;- c(a = qlogis(0.3),\n            b_sex = log(or_sex),\n            b_age = log(or_age))\n\n# True survival probability\nsurv_p &lt;- plogis(qlogis(0.3) +\n                 log(or_sex) * (sex == \"M\") +\n                 log(or_age) * age)\nset.seed(2009)\nsurv &lt;- rbinom(n, 1, surv_p)\nplot(surv ~ age,\n     col = sex,\n     pch = 19, \n     cex = 0.3,\n     ylab = \"Survived (0/1)\")"
+  },
+  {
+    "objectID": "Week3-glm.html#logistic-regression-frequentist",
+    "href": "Week3-glm.html#logistic-regression-frequentist",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Logistic regression: frequentist",
+    "text": "Logistic regression: frequentist\nWe can fit a logistic regression model using the glm() function. We need to specify the family as ”binomial”.\n\nglm4 &lt;- glm(surv ~ sex + age, family = \"binomial\")\nsummary(glm4)\nexp(coef(glm4))   # odds ratios\n#The estimated intercept (as a probability)\nexp(coef(glm4)[1])/(exp(coef(glm4)[1]) + 1)"
+  },
+  {
+    "objectID": "Week3-glm.html#predictions-logistic-regression",
+    "href": "Week3-glm.html#predictions-logistic-regression",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Predictions: logistic regression",
+    "text": "Predictions: logistic regression\nWe can make predictions from this model. As before, we create a new dataframe and use the predict function.\n\nnew_data     &lt;- expand.grid(sex = levels(sex), age = 0:15)\nnew_data$fit &lt;- predict(glm4, newdata = new_data, type = \"response\")\n\nplot(surv ~ age,\n     col = sex,\n     pch = 19, \n     cex = 0.3,\n     ylab = \"Pr(survival)\")\nfor (s in c(\"M\", \"F\")) {\n  lines(fit ~ age,\n        new_data[new_data$sex == s, ],\n        lwd = 2, \n        col = ifelse(s == \"M\", \"black\", \"red\"))\n}\nlegend(\"topright\",\n       legend = c(\"M\", \"F\"),\n       col = c(\"black\", \"red\"), \n       lwd = 2, \n       bty = \"n\")\n\n\nNote that type = “response” in predictions from Poisson and logistic regression."
+  },
+  {
+    "objectID": "Week3-glm.html#logistic-regression-bayesian",
+    "href": "Week3-glm.html#logistic-regression-bayesian",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Logistic regression: Bayesian",
+    "text": "Logistic regression: Bayesian\nWe can fit the same model using nimble().\n\nlist_data &lt;- list(surv = surv,\n                  n = length(surv),\n                  sex = as.numeric(sex) - 1,\n                  age = age)\n\nmodel_3 &lt;- nimbleCode( {\n  # Likelihood\n  for(i in 1 : n) {\n    # Response y is from Binomial distribution\n    surv[i] ~ dbern(p[i]) # the same as dbinom(p[i], 1)\n    # Linear predictor\n    logit(p[i]) &lt;- a + b_sex * sex[i] + b_age * age[i]\n  }\n  # Priors\n  a ~ dnorm(0, 0.001)\n  b_sex ~ dnorm(0, 0.001)\n  b_age ~ dnorm(0, 0.001)\n} )\n\n# Starting values\ninits &lt;- list(a = rnorm(1),\nb_sex = rnorm(1),\nb_age = rnorm(1))\n# Parameters monitored\nparams &lt;- c(\"a\", \"b_sex\", \"b_age\")\n# MCMC settings\nni &lt;- 10000 ; nb &lt;- 5000 ; nc &lt;- 4 ; nt &lt;- 1\n# Model fitting\nout3 &lt;- nimbleMCMC(code      = model_3,\n                   constants = list_data,\n                   inits     = inits,\n                   monitors  = params,\n                   nburnin   = nb,\n                   niter     = ni,\n                   thin      = nt,\n                   nchains   = nc,\n                   summary   = TRUE,\n                   samplesAsCodaMCMC = TRUE)\nout2$summary$all.chains"
+  },
+  {
+    "objectID": "Week3-glm.html#predictions-logistic-regression-1",
+    "href": "Week3-glm.html#predictions-logistic-regression-1",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Predictions: logistic regression",
+    "text": "Predictions: logistic regression\n\nnew_data &lt;- expand.grid(sex = levels(sex), age = 0:15)\n# Compute posterior means -----\na_mean &lt;- out3$summary$all.chains[\"a\",\"Mean\"]\nbage_mean &lt;- out3$summary$all.chains[\"b_age\",\"Mean\"]\nbsex_mean &lt;- out3$summary$all.chains[\"b_sex\",\"Mean\"]\nnew_data$binary_sex &lt;- (as.numeric(new_data$sex) - 1)\nnew_data$fit &lt;- cbind(ilogit(a_mean +\n                             new_data$binary_sex * bsex_mean +\n                             new_data$age * bage_mean ))\nplot(surv ~ age, col = sex)\nfor(s in c(\"F\",\"M\")) {\n  lines(fit ~ age,\n        new_data[new_data$sex == s,],\n        type = \"l\",\n        lwd = 2,\n        col = sex)\n}\n\n\nCan you add a legend to this plot to show what colors represent?"
+  },
+  {
+    "objectID": "Week3-glm.html#predictions-logistic-regression-2",
+    "href": "Week3-glm.html#predictions-logistic-regression-2",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Predictions: logistic regression",
+    "text": "Predictions: logistic regression\nWe can compute 95% Bayesian credible intervals around predictions.\n\na_lci &lt;- out3$summary$all.chains[\"a\",\"95%CI_low\"]\nbage_lci &lt;- out3$summary$all.chains[\"b_age\",\"95%CI_low\"]\nbsex_lci &lt;- out3$summary$all.chains[\"b_sex\",\"95%CI_low\"]\nnew_data$lci &lt;- cbind(ilogit(a_lci +\n                             new_data$binary_sex * bsex_lci +\n                             new_data$age * bage_lci))\nplot(surv ~ age, col = sex, pch = 19, cex = 0.3,\n     ylab = \"Pr(survival)\")\nfor(s in c(\"F\",\"M\")) {\n  lines(lci ~ age,\n        new_data[new_data$sex == s,],\n        type = \"l\",\n        lty = 2,\n        col = sex)\n}\n\n\nCan you repeat find the upper uncertainty bound and add the line similar to above?"
+  },
+  {
+    "objectID": "Week3-glm.html#your-turn",
+    "href": "Week3-glm.html#your-turn",
+    "title": "WILD 591 – Spatial Population Modeling",
+    "section": "Your turn",
+    "text": "Your turn\n\n\n\n\n\n\nTipPractice\n\n\n\nYou should now be able to identify what kind of data (response variable) you have and specify an appropriate regression model to describe the relationship between response and explanatory variables.\n\nWhat biological process underlies the pattern in your data?\nWhat probabilistic process produces the values of your data?\nFit an appropriate model (Gaussian, Poisson, or Binomial) to your own data using nimble package."
+  }
+]
