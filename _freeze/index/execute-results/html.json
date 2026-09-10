@@ -2,10 +2,8 @@
   "hash": "ba66553ce7d788f93aeaf6587c45f5ba",
   "result": {
     "engine": "knitr",
-    "markdown": "---\ntitle: \"WILD 591 — Spatial Population Modeling\"\nsubtitle: \"\"\nformat:\n  html:\n    toc: false\n    theme: cosmo\n    css: styles.css\nlang: en-US\n---\n\nEach lesson is a set of slides with live R code. You do not need R or RStudio installed to try the examples. Edit any code block and press **Run Code** to see the results. That said, I recommend you to install R and RStudio and follow the material on your computer.\n\n## Lessons\n\n| [Getting Started with R](Week1-GettingStartedwR.html) \n| [Lesson 1: Introduction](Week1-introduction.html) \n| [R for Spatial Analysis](Week1-RSpatial.html) \n\n::: callout-tip\n## Navigating the slides\n\nUse the arrow keys or the on-screen controls to move between slides.\n:::\n\n## Getting help\n\nIf a code block did not run, try reloading the page since the browser occasionally drops the R engine after being idle for long.\n",
-    "supporting": [
-      "index_files"
-    ],
+    "markdown": "---\ntitle: \"WILD 591 — Spatial Population Modeling\"\nsubtitle: \"\"\nformat:\n  html:\n    toc: false\n    theme: cosmo\n    css: styles.css\nlang: en-US\n---\n\nEach lesson is a set of slides with live R code. You do not need R or RStudio installed to try the examples. Edit any code block and press **Run Code** to see the results. That said, I recommend you to install R and RStudio and follow the material on your computer.\n\n## Lessons\n\n| [Getting Started with R](Week1-GettingStartedwR.html) \n| [Lesson 1: Introduction](Week1-introduction.html) \n| [R for Spatial Analysis](Week1-RSpatial.html) \n| [Lesson 2: Spatial Patterns](Week2-SpatialPatterns.html) \n| [Lesson 4: Scale of Effect](Week3-ScaleEffect.html) \n| [Lesson 4: Scale of Effect](Week3-ScaleofEffectBaseR.html) \n\n::: callout-tip\n## Navigating the slides\n\nUse the arrow keys or the on-screen controls to move between slides.\n:::\n\n## Getting help\n\nIf a code block did not run, try reloading the page since the browser occasionally drops the R engine after being idle for long.\n",
+    "supporting": [],
     "filters": [
       "rmarkdown/pagebreak.lua"
     ],
