@@ -1,0 +1,1111 @@
+---
+title: "WILD 591 – Spatial Population Modeling"
+subtitle: "Lesson 6: Point Process"
+author: "Mahdieh Tourani"
+date: last-modified
+lang: en
+format:
+  live-revealjs:
+    self-contained: true
+    theme: [serif, custom.scss]
+    slide-number: true
+    show-slide-number: all
+    scrollable: true
+    controls: true
+    width: 1050
+    height: 700
+    margin: 0.1
+engine: knitr
+title-slide-attributes:
+  data-background-image: "images/cover-ch1.jpg"
+  data-background-size: "30%"
+  data-background-position: "right 1px bottom 1px"
+editor: 
+  markdown: 
+    wrap: 72
+---
+
+{{< include ./_extensions/r-wasm/live/_knitr.qmd >}}
+
+# Where we're going {.center}
+
+## Roadmap for today
+
+1.  Univariate point pattern analysis
+
+2.  Bivariate point pattern analysis
+
+3.  Point pattern analysis with covariates
+
+::: notes
+:::
+
+# 1.1 Building patterns {.center}
+
+## R Package
+- The primary package for spatial point patterns in R is `spatstat`.
+- `spatstat` uses three core custom classes:
+  - `ppp`: Point Pattern (coordinates + marks).
+  - `owin`: Observation Window (study boundaries).
+  - `im`: Pixel Image (covariates or kernel densities).
+
+::: notes
+spatstat is a massive, incredibly powerful package. It separates the point locations (ppp) from the boundary window (owin) because boundary shape affects Ripley's K calculations and requires edge corrections.
+:::
+```{webr}
+#| message: false
+library(spatstat)
+
+# spatstat was split into sub-packages c. 2022; the umbrella package
+# loads them all. Where the pieces live:
+#   ppp, owin, im, quadratcount, nndist   -> spatstat.geom
+#   Kest, Lest, pcf, Gest, envelope       -> spatstat.explore
+#   ppm, kppm, predict.ppm                -> spatstat.model
+#   rpoispp, rThomas, rMatClust, rlabel   -> spatstat.random
+packageVersion("spatstat")
+```
+
+::: notes
+Spatstat is one of the best
+maintained packages in ecology — Baddeley, Rubak & Turner's book (2015)
+is the 1000-page reference if anyone gets serious.
+
+Worth showing because error messages will sometimes name a sub-package
+rather than spatstat, and students find that confusing.
+-
+The book also used rgdal::readOGR to load a boundary shapefile. That's
+retired; use sf::st_read() then as.owin(), or build the owin from
+coordinates as we do.
+:::
+
+## The Prickly Pear Cactus
+
+- **Cactus species** *Opuntia humifusa* mapped in a 50x50m plot in Florida.
+- **Herbivore**: Coreid bug (*Chelinidea vittiger*), a specialist insect herbivore.
+- **Covariate**: Continuous matrix vegetation height (mapped at 2m spacing).
+
+::: notes
+We'll use a simulated representation of the Florida cactus plot to demonstrate spatstat syntax. Notice that we define the boundary as a 50x50 owin.
+:::
+
+![](images/Opuntia.jpg){fig-align="center" width="60%"}
+
+
+## Simulate patterns
+
+```{webr}
+#| label: veg-covariate
+#| fig-width: 7
+#| fig-height: 6
+# A smooth vegetation-height surface, as a spatstat pixel image
+gx <- seq(0.25, 49.75, length.out = 100)
+gy <- seq(0.25, 49.75, length.out = 100)
+
+# NOTE: im() wants rows = y, columns = x. outer(gy, gx, ...) gets this right.
+veg_mat <- outer(gy, gx, function(yy, xx)
+  22 + 7 * sin(xx / 8.5) + 5 * cos(yy / 11) - 0.004 * (xx - 25)^2)
+cov_veg <- im(veg_mat, xcol = gx, yrow = gy)
+plot(cov_veg, main = "Simulated vegetation height (cm)")
+```
+::: notes
+outer(X, Y, FUN) builds every combination of the two input vectors and applies FUN to all of them at once, returning a matrix. The result has length(X) rows and length(Y) columns. So here you get a matrix with one row per value of gy and one column per value of gx
+
+`outer(gy, gx, f)` produces rows indexed by gy, which is what im() wants. spatstat's im() expects rows = y, columns = x. 
+:::
+
+## An inhomogeneous Thomas process
+
+```{webr}
+#| label: simulate-cactus
+#| fig-width: 7
+#| fig-height: 6.4
+set.seed(414)
+W <- owin(c(0, 50), c(0, 50))
+
+kappa <- 0.008     # parent intensity, per m^2
+mu    <- 4.6       # mean offspring per parent
+sc    <- 3.7       # cluster scale, m
+
+# parent intensity depends on vegetation height -> genuine inhomogeneity
+lam_mat <- kappa * exp(0.10 * (veg_mat - mean(veg_mat)))
+parents <- rpoispp(im(lam_mat, xcol = gx, yrow = gy))
+
+# Gaussian offspring around each parent 
+nk <- rpois(npoints(parents), mu)
+ox <- rep(parents$x, nk) + rnorm(sum(nk), 0, sc)
+oy <- rep(parents$y, nk) + rnorm(sum(nk), 0, sc)
+keep <- ox >= 0 & ox <= 50 & oy >= 0 & oy <= 50
+
+cactus <- ppp(ox[keep], oy[keep], window = W)
+npoints(cactus)
+plot(cactus, pch = 19, cex = 0.8, main = "Simulated cactus patches")
+```
+::: notes
+- **Thomas Process**: Offspring are distributed around parents using a bivariate normal (Gaussian) distribution.
+
+Let's say vegetation has a positive clustering effect. We built the Thomas process rather than calling rThomas(), because: First, it makes the generative model visible: parents from
+a Poisson process, offspring Gaussian around them. Second, rThomas()
+only takes a constant parent intensity, and we want parent intensity to depend on vegetation.
+
+So we know two true facts: clustering at scale 3.7 m, and a positive vegetation effect. 
+
+Offspring landing outside the window are dropped, which is why npoints
+is a bit below kappa \* mu \* area. Print it so students see the realized n.
+
+cactus_ppp <- rThomas(kappa=0.015, scale=4, mu=4, win=cactus_win)
+
+Our local 0-50 coordinates sidestep that entirely — worth
+mentioning as a practical tip: rescale before fitting trend models.
+:::
+
+## Visualization
+First-order density can be estimated using a kernel smoother with a specified bandwidth.
+
+```{webr}
+#| label: summary-density
+#| fig-width: 11.5
+#| fig-height: 5.2
+summary(cactus)
+
+op <- par(mfrow = c(1, 2), mar = c(1, 1, 3, 3))
+plot(cactus, pch = 19, cex = 0.7, main = "point locations")
+#Plot kernel density intensity (bandwidth sigma)
+plot(density(cactus, sigma = 3), main = "kernel intensity, sigma = 3 m")
+plot(cactus, add = TRUE, pch = 19, cex = 0.4, col = "white")
+par(op)
+```
+
+::: notes
+summary() gives n, the average intensity, and the window.
+The density plot is the first-order view — where are points dense?
+Bright patches suggest the homogeneity assumption is shaky, which
+motivates Lab D. Choice of sigma matters and is arbitrary; try 1 and 6
+to see.
+Kernel smoothing shows us areas of high local density. However, is this density variation due to small-scale clustering (second-order) or a broad environmental gradient (first-order)? Point process models will help us disentangle this.
+:::
+
+## Quadrat counts and a chi-square test
+
+```{webr}
+#| label: quadrat
+#| fig-width: 11.5
+#| fig-height: 5.2
+Q <- quadratcount(cactus, nx = 4, ny = 4)   # 12.5 x 12.5 m quadrats
+
+op <- par(mfrow = c(1, 2), mar = c(1, 1, 3, 1))
+plot(cactus, pch = 19, cex = 0.7, main = "counts in 4 x 4 quadrats")
+plot(Q, add = TRUE, cex = 1.2, col = "firebrick")
+plot(intensity(Q, image = TRUE), main = "quadrat intensity")
+par(op)
+
+quadrat.test(cactus, nx = 4, ny = 4, method = "Chisq")
+```
+
+::: notes
+A significant result means the counts are inconsistent with a homogeneous Poisson process AT THE QUADRAT SCALE YOU CHOSE. Say that qualification out loud.
+
+This is closer to a first-order analysis, since it's about dispersion of points among sampling quadrats rather than inter-point distances. It
+tells you nothing about the scale of pattern.
+
+Live demo if you have time: rerun with nx = 2 and nx = 8 and watch the p-value move. That's the modifiable areal unit problem, and it's the argument for the functional statistics coming next.
+:::
+
+# 1.2 Univariate analysis {.center}
+
+## *K* and *L*, ignoring edges
+
+```{webr}
+#| label: fig-K-L
+#| fig-width: 12.5
+#| fig-height: 4.4
+op <- par(mfrow = c(1, 3), mar = c(4.4, 4.6, 3, 1))
+plot(Kest(cactus, correction = "none"), main = "(a) K(r)", legend = FALSE)
+plot(Lest(cactus, correction = "none"), main = "(b) L(r), expectation = r",
+     legend = FALSE)
+plot(Lest(cactus, correction = "none"), . - r ~ r,
+     main = "(c) L(r) - r, expectation = 0", legend = FALSE)
+par(op)
+```
+
+::: notes
+Three views of the same information. Panel (a) shows why nobody plots
+raw K — the expected curve is a parabola.
+
+The dashed line is the theoretical CSR expectation; spatstat
+labels it "Kpois" or "Lpois". The solid line is the estimate.
+
+Panel (c) uses the formula interface `. - r ~ r`, which subtracts r from
+every curve to put the expectation at zero. That's the second
+linearization convention from earlier, and it's the one we use for the
+rest of the lab because departures are easiest to read against a flat line.
+
+All three ignore edge effects, which we fix next.
+:::
+
+## What goes wrong at the edge?
+
+Near the study area boundary you have no information about points
+outside.
+
+So a circle of radius *r* centred near the edge contains fewer observed points than the truth.
+
+- Uncorrected statistics are therefore **biased**
+- biased increasingly at large *r*, because bigger circles overlap the boundary
+more.
+
+::: notes
+The direction of bias is predictable and worth stating: uncorrected K
+and L will tend to DECLINE at large r, which can masquerade as
+regularity at large scales.
+
+We'll see exactly that artefact in Lab B when we compare corrected to
+uncorrected curves.
+:::
+
+## Edge corrections compared
+
+```{webr}
+#| label: fig-edge-compare
+#| fig-width: 12.5
+#| fig-height: 4.6
+op <- par(mfrow = c(1, 3), mar = c(4.4, 4.6, 3, 1))
+plot(Lest(cactus, correction = "none"), . - r ~ r,
+     main = "no correction", legend = FALSE)
+plot(Lest(cactus, correction = "isotropic"), . - r ~ r,
+     main = "isotropic (Ripley weights)", legend = FALSE)
+plot(Lest(cactus, correction = "translate"), . - r ~ r,
+     main = "translate (toroidal)", legend = FALSE)
+par(op)
+```
+
+::: notes
+Compare the three at LARGE r, where they diverge. At small r they agree,
+because small circles rarely touch the boundary.
+
+The uncorrected curve should bend downward at large r. Explain why: near
+the edge you count fewer points than exist, so the estimate is dragged
+down, and the bias grows with r. That downward artefact can be misread
+as regularity at large scales.
+
+Isotropic and translate should agree closely on a rectangular window. On
+an irregular polygon they would not, and translate is the more general
+choice.
+:::
+
+## Is it significant? Monte Carlo envelopes
+To test for non-randomness, we fit the L-function and compare it to **Monte Carlo confidence envelopes under complete spatial randomness**.  
+
+- If the solid observed line **climbs above the shaded gray envelope**, the point pattern is **statistically aggregated** at those scales.
+```{webr}
+#| label: fig-envelope-L
+#| fig-width: 9.5
+#| fig-height: 5.4
+Lcsr  <- envelope(cactus, Lest, nsim = 99, rank = 1,
+                  correction = "translate", global = FALSE, verbose = FALSE)
+Lglob <- envelope(cactus, Lest, nsim = 99, rank = 1,
+                  correction = "translate", global = TRUE, verbose = FALSE)
+
+op <- par(mar = c(4.6, 4.8, 3, 1))
+plot(Lcsr, . - r ~ r, shade = c("hi", "lo"), legend = FALSE,
+     main = "L(r) - r with 99% envelopes: pointwise (grey) + global (dashed)")
+lines(Lglob$r, Lglob$hi - Lglob$r, lty = 2, lwd = 2, col = "grey25")
+lines(Lglob$r, Lglob$lo - Lglob$r, lty = 2, lwd = 2, col = "grey25")
+abline(h = 0, col = "firebrick", lwd = 1.5)
+par(op)
+```
+
+::: notes
+Point out how the observed solid line goes above the shaded gray envelope at distances from 2 to 12 meters. This indicates significant clustering. Ripley's isotropic edge correction is used to weight points near the boundary.
+
+`rank = 1` means the envelope uses the min and max of the simulations.
+With 99 simulations that's alpha = 0.01; with 19 it's 0.05.
+
+Note how much WIDER the global envelope is. That's the multiple-testing
+correction: the global (simultaneous) envelope is based on the maximum
+deviation across all r, D = max\|K(r) - Kpois(r)\|, so a single
+excursion anywhere lets you reject.
+
+Pointwise envelopes at a stated alpha CANNOT be used to reject the null
+at that alpha, because you're testing at many distances. This is a
+widespread error in the published literature. Baddeley et al. (2014) and
+Wiegand et al. (2016) are the references; global tests are still an
+active area.
+
+Report which you used. Most papers don't.
+:::
+
+## Reading an envelope {#envelope-read}
+
+::: {.termbox}
+**ABOVE the band** → more neighbours than the null predicts → **aggregated**
+**INSIDE the band** → indistinguishable from the null → **no evidence against it**
+**BELOW the band** → fewer neighbours than the null predicts → **regular**
+:::
+
+- **Read the *x*-axis, not just the *y*.** "Significant" is meaningless without a
+  distance attached. The answer is always *aggregated **from a to b metres***.
+- **"Inside the band" is not "no pattern."** It means no pattern *beyond what your
+  null already contains.*
+
+## The pair correlation function
+
+```{webr}
+#| label: fig-pcf
+#| fig-width: 11.5
+#| fig-height: 5.2
+Penv <- envelope(cactus, pcf, nsim = 99, rank = 1,
+                 correction = "translate", global = FALSE, verbose = FALSE)
+
+op <- par(mfrow = c(1, 2), mar = c(4.6, 4.8, 3, 1))
+plot(Penv, shade = c("hi", "lo"), legend = FALSE,
+     main = "g(r), default bandwidth (stoyan = 0.15)")
+abline(h = 1, col = "firebrick", lwd = 1.5)
+plot(pcf(cactus, correction = "translate", stoyan = 0.4),
+     main = "g(r), smoother (stoyan = 0.4)", legend = FALSE)
+abline(h = 1, col = "firebrick", lwd = 1.5)
+par(op)
+```
+
+::: notes
+Expectation under CSR is 1, not 0 — different from L. Mark the line.
+
+The `stoyan` argument sets the smoothing kernel bandwidth coefficient;
+default 0.15 follows Stoyan & Stoyan (1994). Raising it to 0.4 gives a
+less wiggly curve. That is a real analytical choice, and the wiggliness
+at small r in the left panel is data sparseness, not biology.
+
+The key comparison to make out loud: g should show aggregation
+concentrated at SHORT distances, while L showed it extending further.
+The book's numbers are L aggregated over roughly 2-13 m, g concentrated
+at 2-6 m. The difference is cumulation, not signal.
+:::
+
+## The *G* function
+
+```{webr}
+#| label: fig-G
+#| fig-width: 9.5
+#| fig-height: 5.4
+Genv <- envelope(cactus, Gest, nsim = 99, rank = 1,
+                 correction = "rs", global = FALSE, verbose = FALSE)
+
+op <- par(mar = c(4.6, 4.8, 3, 1))
+plot(Genv, shade = c("hi", "lo"), legend = FALSE,
+     main = "G(r): nearest-neighbour distribution")
+plot(ecdf(nndist(cactus)), add = TRUE, col = "steelblue", lwd = 2,
+     do.points = FALSE)
+legend("bottomright", bty = "n", lwd = 2, col = "steelblue",
+       legend = "empirical ecdf of nndist()")
+par(op)
+```
+
+::: notes
+Note the r axis is much SHORTER than for L or g. That's inherent —
+nearest neighbour distances are by definition the shortest distances in
+the pattern.
+
+`correction = "rs"` is the reduced-sample correction; edge handling for
+G works differently from K and L.
+
+Overlaying the empirical ecdf of nndist() is a useful sanity check that
+spatstat is computing what you think. They should coincide.
+
+The book's result: nearest-neighbour distances random at very small
+scales (\< 2 m) but closer than expected at larger scales — consistent
+with aggregation but with a minimum spacing, which makes biological
+sense for a plant with physical size.
+:::
+
+## Three functions, three answers
+
+| Function | What it said                                            |
+|----------|---------------------------------------------------------|
+| *L*(*r*) | aggregation across a broad span of *r*                  |
+| *g*(*r*) | aggregation concentrated at **short** distances         |
+| *G*(*r*) | near-random at the very smallest *r*, aggregated beyond |
+
+
+::: notes
+Reporting only K, or only nearest-neighbour distance, hides structure.
+
+The G result at very small r is the interesting one: physical objects
+cannot overlap, so there's an inhibition floor underneath the
+clustering. Two processes at two scales, and only G sees the smaller
+one.
+
+Velázquez et al. (2016) audited practice and found most ecological
+papers use one statistic. Assign that reading with this slide in mind.
+:::
+
+# 2.1 Marked point patterns {.center}
+
+## Use-availability 
+
+*Chelinidea vittiger* is a specialist herbivore on *Opuntia*. A poor disperser that shows aggregated distributions on cactus.
+
+We want the distribution of the herbivore **given the underlying distribution of cactus**.
+
+That's a marked point pattern problem.
+
+::: notes
+Here is our second player... READ THEN
+
+Our simulation assigns the insect mark COMPLETELY AT RANDOM among cactus
+points, so we know the truth: no insect aggregation beyond the host
+plant's. 
+
+Frame this as the availability problem. The insect can only be where
+cactus is. So "are insects clustered?" is nearly meaningless — of course
+they are, because their host is.
+
+The right question conditions on availability. Lancaster & Downes (2004)
+is the methods reference for exactly this framing.
+
+Is the insect herbivore (*Chelinidea*) aggregated on specific cacti, or is its distribution simply a random sample of the available cacti? - We use **Random Labeling** (`rlabel`) to test this. - Shuffles insect "presence" marks across the fixed cactus coordinates.
+:::
+
+![](images/insect.jpg){fig-align="center" width="60%"}
+
+## Build the marked pattern
+
+```{webr}
+#| label: marked-pattern
+#| fig-width: 11
+#| fig-height: 5
+set.seed(77)
+# Insect assigned at random among cacti: TRUE pattern is random given cactus
+occupied <- factor(sample(c("presence","absence"), 
+                          npoints(cactus),
+                          replace = TRUE,
+                          prob = c(0.35, 0.65)))
+
+cactus_PA <- ppp(cactus$x, cactus$y, window = W, marks = occupied)
+table(marks(cactus_PA))
+
+op <- par(mfrow = c(1, 2), mar = c(0.6, 0.6, 2.6, 0.6))
+plot(unmark(cactus_PA[marks(cactus_PA) == "absence"]), pch = 1, cex = 0.8,
+     main = "unoccupied cacti")
+plot(unmark(cactus_PA[marks(cactus_PA) == "presence"]), pch = 19, cex = 0.8,
+     main = "occupied cacti")
+par(op)
+```
+
+::: notes
+Look at each mark level separately before any bivariate analysis.
+`split()` on a marked ppp will also give you one pattern per level, but
+passing plot arguments through plot.splitppp is unreliable, so the two
+panels are drawn directly here.
+
+In the real data the mark came from six surveys per patch, truncated to
+presence/absence. The book does:
+
+Note the information thrown away by truncating counts to binary. Worth a
+sentence: they had abundance and reduced it to occupancy for analytical
+convenience.
+:::
+
+## The naive analysis
+
+```{webr}
+#| label: fig-naive-bug
+#| fig-width: 9.5
+#| fig-height: 5.2
+bug <- unmark(cactus_PA[marks(cactus_PA) == "presence"])
+npoints(bug)
+
+Lbug <- envelope(bug, Lest, nsim = 99, rank = 1,
+                 correction = "translate", global = FALSE, verbose = FALSE)
+
+op <- par(mar = c(4.6, 4.8, 3, 1))
+plot(Lbug, . - r ~ r, shade = c("hi", "lo"), legend = FALSE,
+     main = "Insect occurrence vs CSR (ignoring cactus)")
+abline(h = 0, col = "firebrick", lwd = 1.5)
+par(op)
+```
+
+::: notes
+This should show aggregation. And it's an artefact — we assigned the
+mark at random, so there is no insect aggregation in the truth.
+
+The apparent clustering is entirely inherited from the cactus pattern.
+The null here is CSR over the whole window, but the insect could never
+have been uniformly distributed over the window because its host isn't.
+
+Wrong null, wrong answer. 
+
+:::
+
+## Condition on availability: random labelling
+
+```{webr}
+#| label: fig-random-label
+#| fig-width: 9.5
+#| fig-height: 5.2
+# Keep cactus locations fixed; shuffle which ones are occupied.
+#
+# envelope() controls the r grid itself: it computes the observed curve, reads
+# r off it, then hands that same r to every simulation. So `fun` MUST accept an
+# `r` argument (or `...`), or envelopeEngine() refuses to run.
+Lpres <- function(X, r = NULL, ...) {
+  Lest(unmark(X[marks(X) == "presence"]), r = r, correction = "translate")
+}
+
+Lmark <- envelope(cactus_PA, Lpres, nsim = 99, rank = 1,
+                  simulate = expression(rlabel(cactus_PA)),
+                  global = FALSE, verbose = FALSE)
+
+op <- par(mar = c(4.6, 4.8, 3, 1))
+plot(Lmark, . - r ~ r, shade = c("hi", "lo"), legend = FALSE,
+     main = "Insect occurrence vs random labelling of cacti")
+abline(h = 0, col = "firebrick", lwd = 1.5)
+par(op)
+```
+
+- If we ignore the underlying cactus distribution, the insect appears clustered. But once we condition on cactus availability, we find that **the insect is distributed randomly across available cacti**.
+
+::: notes
+Now the observed curve should sit inside the envelope: given where
+cactus is, the insect is randomly distributed. Which is the truth we
+built in.
+
+`rlabel()` shuffles the marks while holding locations fixed — that is
+the null "insects occupy cacti at random." `rshift()` is the
+alternative, performing a toroidal shift of one mark's pattern while
+holding the other constant, which is the right null for a joint
+distribution question like competition between two species.
+
+The book uses Lcross with random labelling here. Their call is
+envelope(ppp.PA, Lcross, nsim = 99, rank = 1, I = "presence", ...) with
+a CAPITAL I. Lcross takes lowercase i and j, so I lands in ... and i
+silently defaults to the first mark level, alphabetically "absence". The
+code does not analyse what the text says it analyses. Mine subsets
+explicitly to avoid the whole class of problem.
+
+Worth flagging for anyone writing their own summary function: envelope()
+insists that `fun` accept an `r` argument or `...`. That is not
+fussiness. envelope computes the observed curve, reads the r grid off
+it, and passes that same grid to every simulation so the curves can be
+stacked. If you hardcode r inside your function instead of exposing it,
+envelopeEngine() stops with "'fun' should have an argument named 'r'".
+:::
+
+## Conclusion
+
+Analyse the insect alone → **aggregated**
+
+Analyse the insect conditional on cactus → **random**
+
+Same data. The difference is the **null model**.
+
+::: notes
+If you don't control for resource availability, you'll conclude the herbivore is highly aggregated. But the herbivore is actually just going where the cacti are. When you shuffle insect presence across the fixed cacti coordinates, the observed pattern falls inside the envelope!
+
+Generalize it: whenever your points can only occur on a subset of the study area, CSR over the whole area is the wrong null. Nest sites can only be in trees. Camera detections can only be at camera locations.
+Captures can only be at traps.
+
+That last one is directly relevant to the SCR work in this room — and it's why SCR models condition on trap locations rather than treating detections as a free point pattern.
+:::
+
+## Continuous marks: is size clustered?
+
+```{webr}
+#| label: fig-markcorr
+#| fig-width: 11.5
+#| fig-height: 5.2
+set.seed(31)
+area_mark <- rlnorm(npoints(cactus), meanlog = log(0.4), sdlog = 0.7)
+cactus_area <- ppp(cactus$x, cactus$y, window = W, marks = area_mark)
+
+# Null = marks permuted across fixed locations. envelope()'s default null is
+# CSR, which returns UNMARKED patterns that markcorr cannot use.
+MCFenv <- envelope(cactus_area, markcorr, nsim = 99, rank = 1,
+                   correction = "isotropic",
+                   simulate = expression(rlabel(cactus_area)),
+                   global = FALSE, verbose = FALSE)
+
+op <- par(mfrow = c(1, 2), mar = c(4.6, 4.8, 3, 1))
+plot(cactus_area, markscale = 1.6, main = "cactus patch area as a mark")
+plot(MCFenv, shade = c("hi", "lo"), legend = FALSE,
+     main = "mark correlation function")
+abline(h = 1, col = "firebrick", lwd = 1.5)
+par(op)
+```
+
+::: notes
+Expectation is 1. Above 1 means large cacti near other large cacti;
+below 1 means large near small, i.e. an inhibition or size-asymmetry
+process.
+
+We assigned area independently of location, so the curve should sit
+inside the envelope — matching the book's finding of no strong spatial
+pattern in cactus size.
+
+Worth asking what a real positive result would mean biologically: shared
+favourable microsite, or age structure from clonal spread. And what a
+negative would mean: asymmetric competition, where a big plant
+suppresses its neighbours.
+
+Recall the variogram connection — swap m_i\*m_j for (m_i - m_j)\^2 and
+this becomes essentially next week's tool.
+:::
+
+# 2.2 Inhomogeneous processes {.center}
+
+## A GLM for points
+
+An **inhomogeneous point process model** models the intensity of points:
+
+$$\lambda(s) = \exp(\alpha + \beta x(s) + \dots)$$
+
+
+
+::: notes
+If a point pattern varies across environmental gradients, we can model it like a spatial Poisson regression using the `ppm` function. - We model point intensity as a function of coordinates (Easting/Northing) or environmental rasters (e.g., vegetation height) 
+
+Formally very close to Poisson regression (Illian et al. 2008; Renner et
+al. 2015).
+
+Uses: exploratory analysis, inference, and prediction/mapping.
+
+The log link is what makes it Poisson-regression-like and guarantees
+positive intensity.
+
+MaxEnt is equivalent to a Poisson point process model — so
+presence-only SDMs ARE inhomogeneous point process models, whether or
+not their users know it.
+
+Flag that now; it reframes SDMs from a machine-learning trick into a
+statistical model with assumptions you can check.
+:::
+
+## Fit models
+
+```{webr}
+#| label: ppm-fit
+pp_int  <- ppm(cactus ~ 1)                      # homogeneous
+pp_xy   <- ppm(cactus ~ x + y)                  # linear trend
+pp_xy2  <- ppm(cactus ~ polynom(x, y, 2))       # quadratic trend
+pp_veg  <- ppm(cactus ~ veg, covariates = list(veg = cov_veg))
+
+data.frame(
+  model = c("intercept", "x + y", "poly(x,y,2)", "vegetation"),
+  npar  = c(length(coef(pp_int)), length(coef(pp_xy)),
+            length(coef(pp_xy2)), length(coef(pp_veg))),
+  AIC   = round(c(AIC(pp_int), AIC(pp_xy), AIC(pp_xy2), AIC(pp_veg)), 2)
+)
+```
+
+::: notes
+The `ppm` function is the point pattern equivalent of a GLM. By comparing AIC, we can see if adding spatial trends or environmental covariates significantly improves our explanation of the point pattern's first-order intensity.
+
+We built a positive vegetation effect into the simulation, so the vegetation model should be well supported. If it isn't, the effect size (0.10 in the simulation) is too small relative to n — worth saying out loud, because that's a power lesson rather than a bug.
+
+The book's table: intercept 762.87, x+y 761.06, quadratic 753.31, vegetation 754.89. Quadratic best, vegetation close behind. With real data you can't tell whether the quadratic is capturing vegetation indirectly or something else. With our simulation we know.
+:::
+
+<!-- 
+## Loading a real raster covariate
+
+Not executed here — this is the pattern for when you have
+`cactus_matrix`:
+
+``` r
+library(terra)
+veg <- rast("cactus_matrix")
+
+# terra -> spatstat im. Note the ORIENTATION: im() wants rows = y.
+m <- as.matrix(veg, wide = TRUE)      # rows = y, top row = max y
+m <- m[nrow(m):1, ]                   # flip so row 1 = min y
+cov_veg <- im(m,
+              xcol = seq(xmin(veg) + 0.5 * res(veg)[1],
+                         xmax(veg) - 0.5 * res(veg)[1],
+                         length.out = ncol(veg)),
+              yrow = seq(ymin(veg) + 0.5 * res(veg)[2],
+                         ymax(veg) - 0.5 * res(veg)[2],
+                         length.out = nrow(veg)))
+```
+
+::: notes
+This is the bug slide. Two orientation conventions collide: rasters
+store rows top-down with row 1 at maximum y; spatstat's im() indexes
+rows bottom-up with row 1 at minimum y. So you need BOTH a wide matrix
+and a row flip.
+
+The book does neither correctly — it builds nrow = number of unique x,
+which transposes rather than flips.
+
+On a square window with a smooth covariate this renders fine and
+silently gives the wrong covariate values at every location. Exactly the
+kind of error that never announces itself.
+
+Tell students to always plot the im() and compare it visually to the
+raster before fitting anything.
+:::
+-->
+
+## Predictions
+
+```{webr}
+#| label: fig-ppm-trend
+#| fig-width: 11.5
+#| fig-height: 5.2
+op <- par(mfrow = c(1, 2), mar = c(1, 1, 3, 3))
+plot(predict(pp_xy2, type = "trend"), main = "quadratic trend surface")
+plot(cactus, add = TRUE, pch = 19, cex = 0.5, col = "white")
+plot(predict(pp_veg, type = "trend"), main = "vegetation model")
+plot(cactus, add = TRUE, pch = 19, cex = 0.5, col = "white")
+par(op)
+
+round(coef(pp_veg), 4)
+```
+
+::: notes
+These are fitted INTENSITY surfaces — expected points per unit area.
+Compare them to the kernel density plot from Lab A: the density estimate
+is descriptive, these are model-based.
+
+The vegetation coefficient should be positive, recovering the 0.10 we
+built in. Check the magnitude — it won't be exactly 0.10 because our
+covariate enters the PARENT intensity, and the offspring process smears
+it.
+
+That's a genuinely instructive mismatch: the fitted model is not the
+generating model. A Poisson point process model assumes independence,
+and a Thomas process violates it. The point estimate can still be
+reasonable while the standard errors are too small.
+:::
+
+## Dispersion 
+
+```{webr}
+#| label: fig-Linhom
+#| fig-width: 9.5
+#| fig-height: 5.4
+trend_im <- predict(pp_xy2, type = "trend")
+
+Linh <- envelope(cactus, Linhom, lambda = trend_im, nsim = 99, rank = 1,
+                 correction = "translate",
+                 simulate = expression(rpoispp(trend_im)),
+                 global = FALSE, verbose = FALSE)
+
+op <- par(mar = c(4.6, 4.8, 3, 1))
+plot(Linh, . - r ~ r, shade = c("hi", "lo"), legend = FALSE,
+     main = "Inhomogeneous L: clustering beyond the fitted trend")
+abline(h = 0, col = "firebrick", lwd = 1.5)
+par(op)
+```
+
+::: notes
+`Linhom` is the inhomogeneous L, and the null now simulates from the
+FITTED trend rather than from CSR. So the question changes from "is this
+clustered?" to "is this clustered beyond what the trend explains?"
+
+Because our truth is a Thomas process — real clustering at 3.7 m ON TOP
+OF the covariate trend — some aggregation should survive. The book finds
+its clustering "largely (but not entirely) accounted for."
+
+Compare directly to the CSR envelope from Lab B: the excursion should
+shrink but not vanish. That contrast is the payoff of the whole lab.
+
+This is the general recipe: control for known drivers, then ask what
+pattern remains. It's the point-pattern analogue of adding covariates to
+a regression.
+:::
+
+# 3.1 Other nulls, and simulation {.center}
+
+## Two cluster processes
+
+```{webr}
+#| label: fig-cluster-processes
+#| fig-width: 11.5
+#| fig-height: 5.2
+op <- par(mfrow = c(1, 2), mar = c(4.4, 4.6, 3, 1))
+
+# (a) offspring dispersal kernels: Matern uniform vs Thomas Gaussian
+dd <- seq(-10, 10, length.out = 400)
+matern <- ifelse(abs(dd) <= 5, 1 / 10, 0)
+thomas <- dnorm(dd, 0, 3.7)
+plot(dd, thomas, type = "l", lwd = 3, col = "grey20",
+     xlab = "distance from parent (m)", ylab = "density",
+     main = "(a) offspring kernels")
+lines(dd, matern, lwd = 3, col = "firebrick")
+legend("topright", bty = "n", lwd = 3, col = c("grey20", "firebrick"),
+       legend = c("Thomas (Gaussian)", "Matern (uniform)"))
+
+# (b) a realization of each
+set.seed(5)
+plot(rMatClust(0.01, 5, 4.6, win = W), pch = 19, cex = 0.7,
+     main = "(b) Matern cluster realization")
+par(op)
+```
+
+::: notes
+Both processes start the same way: parent points from a Poisson process,
+then offspring clustered around each parent.
+
+They differ only in the offspring kernel. Matern scatters offspring
+UNIFORMLY within radius r of the parent — a hard edge. Thomas scatters
+them with an isotropic Gaussian — no hard edge, thinner tails.
+
+Biological reading: Thomas looks like seed dispersal from a parent
+plant, which is why it fits the cactus data. Matern looks more like a
+process with a definite territory radius.
+
+Panel (a) makes the distinction visible in one plot; the hard shoulder
+on the Matern kernel is the whole difference.
+:::
+
+## Fitting a cluster process as the null
+
+```{webr}
+#| label: kppm-fit
+fit_thomas <- kppm(cactus ~ 1, clusters = "Thomas")
+fit_thomas
+```
+
+::: notes
+`kppm` fits a cluster process by minimum contrast. The printout gives
+the cluster parameters: kappa (parent intensity), scale (sigma), and mu
+(mean cluster size).
+
+Compare those to what we simulated: kappa 0.008, scale 3.7, mu 4.6.
+Recovery won't be exact — minimum contrast estimation is noisy on \~90
+points, and our parent intensity was inhomogeneous while kppm assumes
+it's constant.
+
+The book's fit on real data gave mean cluster size 4.6 points at scale
+3.7 m, which is where our simulation parameters came from. So this slide
+closes the loop.
+
+Note you can add covariates: kppm(cactus \~ polynom(x, y, 2), "Thomas")
+fits clustering AND trend together, which is the better model for our
+data.
+:::
+
+## Envelopes under a cluster null
+
+```{webr}
+#| label: fig-cluster-envelope
+#| fig-width: 11.5
+#| fig-height: 5.2
+Env_thom <- envelope(fit_thomas, Lest, nsim = 99, rank = 1,
+                     global = FALSE, verbose = FALSE)
+
+fit_mat <- kppm(cactus ~ 1, clusters = "MatClust")
+Env_mat <- envelope(fit_mat, Lest, nsim = 99, rank = 1,
+                    global = FALSE, verbose = FALSE)
+
+op <- par(mfrow = c(1, 2), mar = c(4.6, 4.8, 3, 1))
+plot(Env_thom, . - r ~ r, shade = c("hi", "lo"), legend = FALSE,
+     main = "null = Thomas process")
+abline(h = 0, col = "firebrick", lwd = 1.5)
+plot(Env_mat, . - r ~ r, shade = c("hi", "lo"), legend = FALSE,
+     main = "null = Matern cluster process")
+abline(h = 0, col = "firebrick", lwd = 1.5)
+par(op)
+```
+
+::: notes
+The observed curve should now sit inside both envelopes: the pattern is
+not distinguishable from either cluster process. Which is right — we
+generated it from a Thomas process.
+
+Note the envelopes are much WIDER than the CSR envelope in Lab B. A
+cluster process null already contains clustering, so it takes much
+stronger evidence to reject it.
+
+The deeper point, and it's Wiegand et al. (2013)'s argument: our pattern
+is consistent with Thomas AND with Matern. Two different generative
+mechanisms, one pattern. Fitting a null well is not evidence that the
+null is the true mechanism.
+:::
+
+## Simulating point processes
+
+```{webr}
+#| label: fig-simulate
+#| fig-width: 11.5
+#| fig-height: 5.6
+set.seed(101)
+
+# homogeneous, at the observed intensity
+sim_hom <- rpoispp(intensity(cactus), win = W, nsim = 2)
+
+# inhomogeneous, from a fitted ppm trend surface
+sim_inh <- rpoispp(trend_im, nsim = 2)
+
+op <- par(mfrow = c(2, 2), mar = c(0.6, 0.6, 2.6, 0.6))
+plot(sim_hom[[1]], pch = 19, cex = 0.6, main = "homogeneous, sim 1")
+plot(sim_hom[[2]], pch = 19, cex = 0.6, main = "homogeneous, sim 2")
+plot(sim_inh[[1]], pch = 19, cex = 0.6, main = "from fitted trend, sim 1")
+plot(sim_inh[[2]], pch = 19, cex = 0.6, main = "from fitted trend, sim 2")
+par(op)
+```
+
+::: notes
+`intensity()` pulls lambda straight from the data, so the simulations
+match the observed density. Passing an `im` instead of a number gives an
+inhomogeneous process.
+
+Emphasize what this is for. Every envelope in this deck was built from
+simulations exactly like these — that's what the Monte Carlo machinery
+is doing under the hood. Making it explicit demystifies it.
+
+Also: this is how you do a power analysis for a point pattern study.
+Simulate the effect you expect at the sample size you can afford, and
+see whether your statistic detects it. Nobody does this. Everybody
+should.
+
+Kery & Royle (2016) is the reference for simulation-based model checking
+in ecology more broadly.
+:::
+
+# 3.2 Wrapping up {.center}
+<!--
+## Where to from here
+
+**Space–time analysis** treat event time as a continuous mark, or use spatio-temporal *K* and *g* functions (Gabriel & Diggle 2009). See the `stpp` package (Gabriel et al. 2013).
+
+**Replicated point patterns** — multiple plots. Two cases:
+
+- dispersal possible between sites → one `owin` with gaps masked out
+- sites are independent replicates → analyse separately, combine
+  summaries, or use a `hyperframe` (Bagchi & Illian 2015)
+
+::: notes
+The space-time route is genuinely useful for nest predation studies: is
+predation clustered in space AND time, as you'd expect if a predator
+learns a patch? Treating Julian date as a continuous mark and running a
+mark correlation function is a cheap first look.
+
+Replicated patterns matter for anyone with multiple plots, which is most
+field ecologists. It's also the honest answer to "my pattern is too
+sparse" — pool replicates rather than over-interpreting 15 points.
+
+Both are active development areas.
+:::
+-->
+
+## Recommendations
+
+From the review you're reading this week:
+
+1.  Use **more than one** second-order statistic — *K*, *L*, *g*, *G* to capture different information
+2.  **Adjust for edge effects** in almost all situations
+3.  Consider the potential for **inhomogeneous** patterns
+4.  Treat **pointwise envelopes** carefully; consider **global** envelopes
+5.  Remember CSR is a **reference**, not a hypothesis about biology
+
+::: notes
+This is the practical checklist. If they internalize five things from
+this chapter, these are the five.
+
+Point 4 is the one most often violated in print, and the easiest to fix.
+
+Point 5 is the conceptual one. Rejecting CSR is nearly free — almost
+nothing in nature is CSR. The interesting work starts with a null that
+encodes something you actually believe.
+:::
+
+## Take home
+
+1.  The **window is part of the data** — change it and you change every statistic
+2.  *K* is **cumulative**; *g* **localizes** scale; *G* sees only the nearest neighbour
+3.  **Edge effects** bias you downward at large *r*, mimicking regularity
+4.  The **null model carries the biology**. Insects looked aggregated until we conditioned on their host plant
+5.  Presence-only data are **thinned** point data 
+
+::: notes
+Point 4 - If a student can articulate why the insect result
+changed, they've understood point pattern analysis better than most published users of it.
+
+:::
+
+<!--
+## This week's reading
+
+- **Wiegand, T. & Moloney, K.A. (2004)** Rings, circles, and null-models
+  for point pattern analysis in ecology. *Oikos* 104: 209–229
+- **Law, R. et al. (2009)** Ecological information from spatial patterns
+  of plants: insights from point process theory. *Journal of Ecology*
+  97: 616–628
+- **Velázquez, E. et al. (2016)** An evaluation of the state of spatial
+  point pattern analysis in ecology. *Ecography* 39: 1042–1055
+
+::: notes
+Wiegand & Moloney is the standard ecological entry point and the source
+of the K-versus-g argument we spent time on. Read it first.
+
+Law et al. is the conceptual one: it shifts the question from "describe
+the pattern" to "what process could have generated it," which is the
+honest framing of question 3 from the opening.
+
+Velázquez et al. is the audit — how ecologists actually use these
+methods and where they go wrong. Good critical-appraisal exercise: have
+each student score one published point-pattern paper against the five
+recommendations.
+
+Discussion prompt: Law et al. argue pattern carries information about
+process. Our Thomas-versus-Matern result says two processes gave one
+pattern. Reconcile those.
+:::
+-->
+
+## Exercise 1: Evaluate a Clustered Pattern against CSR
+
+::: {.callout-tip title="Exercise 1"}
+Generate a random Poisson process and a clustered Thomas process. Fit the G-function (nearest neighbor distance) for both and compare their curves.
+:::
+
+```{webr}
+#| label: ex-g-func
+#| fig-cap: "G-function (nearest-neighbor distance) of the clustered point pattern"
+library(spatstat)
+set.seed(15)
+win <- owin(c(0, 50), c(0, 50))
+
+# 1. Simulate a completely random pattern (CSR)
+ppp_random <- rpoispp(lambda=0.03, win=win)
+
+# 2. Simulate a clustered pattern (Thomas Process)
+ppp_cluster <- rThomas(kappa=0.01, scale=3, mu=3, win=win)
+
+# 3. Calculate and plot the G-function for the clustered pattern
+g_cluster <- Gest(ppp_cluster, correction="rs")
+plot(g_cluster, main="G-Function (Nearest Neighbor) of Clustered Pattern")
+```
+
+::: notes
+The G-function rises very rapidly at small distances for clustered patterns because points are crowded close to their neighbors. Encourage students to compare this plot to the G-function of the `ppp_random` to see the difference.
+:::
+
+## Exercise 2: Fit and Predict an Inhomogeneous PPM
+
+::: {.callout-tip title="Exercise 2"}
+Fit a spatial trend model to the simulated cactus dataset. Predict and map the estimated trend across the plot.
+:::
+
+```{webr}
+#| label: ex-ppm-fit
+#| fig-cap: "Predicted intensity surface along the X coordinate, with observed points overlaid"
+library(spatstat)
+set.seed(42)
+win <- owin(c(0, 50), c(0, 50))
+ppp_data <- rThomas(kappa=0.015, scale=4, mu=4, win=win)
+
+# 1. Fit an inhomogeneous model with a linear trend in the X direction
+fit_x <- ppm(ppp_data ~ x)
+
+# 2. Predict the intensity trend
+trend_im <- predict(fit_x, type="trend")
+
+# 3. Plot the predicted intensity surface
+plot(trend_im, main="Predicted Intensity Surface along X coordinate")
+plot(ppp_data, add=TRUE, cols="white", pch=19)
+```
+
+::: notes
+Have students change `~ x` to `~ x + y` or `~ polynom(x, y, 2)` to see how the predicted intensity map becomes more flexible and adapts to local clustering of the points.
+:::
+

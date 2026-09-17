@@ -1,0 +1,1178 @@
+---
+title: "WILD 591 – Spatial Population Modeling"
+subtitle: "Lesson 5: Point Patterns"
+author: "Mahdieh Tourani"
+date: last-modified
+lang: en
+format:
+  live-revealjs:
+    self-contained: true
+    theme: [serif, custom.scss]
+    slide-number: true
+    show-slide-number: all
+    scrollable: true
+    controls: true
+    width: 1050
+    height: 700
+    margin: 0.1
+engine: knitr
+title-slide-attributes:
+  data-background-image: "images/cover-ch1.jpg"
+  data-background-size: "30%"
+  data-background-position: "right 1px bottom 1px"
+editor: 
+  markdown: 
+    wrap: 72
+---
+
+{{< include ./_extensions/r-wasm/live/_knitr.qmd >}}
+
+# Where we're going {.center}
+
+## Roadmap for today
+
+1.  Point pattern and point process
+
+2.  Spatial randomness
+
+3.  Point pattern analysis
+
+::: notes
+Last week, we worked with grid cells, this week we work with point locations as data and try to model how points are distributed in space.
+An insect that looks strongly aggregated turns out to be randomly distributed once you condition on where its host plant is.
+:::
+
+# 1.1 Point pattern {.center}
+
+## Point data
+
+> Distinct locations in space
+
+Point data are among the most common spatial data types in ecology:
+
+- individual trees
+- bird nests
+- habitat patches
+- patchy disturbances such as burrows
+- locations of species occurrence
+- origin points of an invasion
+
+::: notes
+Point data refers to distinct locations in space. 
+One of the most common data types we see in spatial ecology. What are some of your point data? 
+Camera deployments, nest sites, capture locations, telemetry fixes — though telemetry needs care, since repeated locations of one animal are not independent points.
+
+Note the third one: habitat PATCHES as points. A patch mosaic can be reduced to a point pattern of patch centroids
+:::
+
+## Point pattern
+> A set of spatial coordinates of discrete "events" or individuals observed inside a specified boundary.
+
+Typical point pattern analysis questions:
+
+- Are the points **aggregated, uniform, or random**?  
+- Does that **change with scale**?  
+
+- **What process** produced it?  
+
+
+::: notes
+
+
+Emphasize that PPA differs from standard spatial modeling because the point location *itself* is the random event under study, rather than just the attribute value at that location. We want to know: why are the points where they are?
+
+Question 3 is the hard one, and the honest answer is often "several processes could have."
+
+Emphasize that 1 and 2 are descriptive and largely solved; 3 is inferential and mostly not.
+
+Wiegand et al. (2013) is the key citation: different point processes can
+produce nearly identical summary statistics, which is why they argue
+several statistics should always be used. That paper is the reason this
+chapter teaches four functions instead of one.
+
+:::
+
+## Three processes, one pattern
+How to disentangle dispersal, habitat heterogeneity, and plant-plant interactions as causes of conspecific aggregation? (Lara-Romero et al. 2016 on canvas)
+![](images/auto3.jpg){fig-align="center"}
+
+::: notes
+Do you have pets? Let's say you go home and as soon as you open the door you see a broken vase on the floor. You realize that the window is open and your cat is sitting close by licking its paw. Now, all you see is a broken vase, maybe a draft blew a curtain into it, maybe the cat knocked it over, maybe someone broke in, you don't recall if you left the window open. The pattern is the broken vase, the process could be any of these.
+Remmeber we talked about plants grouptogether in clusters? Using point pattern analysis we can model the underlying processes. The alternatives are:
+- **a homogeneous point pattern process** where seess are distributed at random without env preference or autocorrelation with where the trees are 
+- **Inhomogeneous poisson process** where clustering is because of soil nutrients or microhabitat conditions, entirely environmental drive
+- **Poisson cluser process** where the pattern is purely as a result of dispersal from original trees - the biological process 
+-Finally, an **inhomogeneous poisson cluster** process which is a combination of both biological and env.
+
+We'll walk through both univariate and marked point pattern analysis. We'll be using the spatstat, which is the most comprehensive point pattern analysis package in the R ecosystem.
+:::
+
+## Spatial dispersion
+> The arrangement of points in space relative to one another
+
+  - **Aggregated (clumped)**: Points cluster together  
+  
+  - **Random**: Points are distributed independently.  
+  
+  - **Regular (uniform)**: Points are evenly spaced.  
+  
+
+```{r}
+library(spatstat)   # startup banner suppressed via message: false
+
+W1 <- owin(c(0, 1), c(0, 1))
+set.seed(3)
+
+op <- par(mfrow = c(1, 3))
+plot(rMatClust(25, 0.05, 4, win = W1), pch = 19, cex = 2, 
+     main = "(a) aggregated")
+
+plot(rpoispp(100, win = W1), pch = 19, cex = 2, 
+     main = "(c) random")
+
+plot(rMaternII(400, 0.045, win = W1), pch = 19, cex = 2,  
+     main = "(b) uniform (regular)")
+
+par(op)
+```
+  
+:::{.notes}
+the three classical dispersion types. 
+We can visually distinguish the three main forms of spatial dispersion.
+Panel (b) is worth pausing on — genuinely regular patterns are rare in nature and usually indicate territoriality or competition for space.
+-
+Seabloom et al. (2002, PNAS): extinction rates under
+non-random habitat loss differ substantially from random-loss predictions. Since real land conversion is emphatically non-random — it follows soils, slope, and roads — the standard species-area extrapolation is systematically wrong.
+:::  
+
+## Dispersion is scale dependent
+
+```{r}
+library(spatstat)
+
+W1 <- owin(c(0, 1), c(0, 1))
+set.seed(3)
+
+op <- par(mfrow = c(1, 3), mar = c(0.5, 0.5, 2.4, 0.5))
+for (s in c(0.03, 0.08, 0.18)) {
+  plot(rMatClust(12, s, 8, win = W1), pch = 19, cex = 2,
+       main = paste("aggregated, scale =", s))
+}
+par(op)
+```
+
+:::{.notes}
+
+Pattern without scale isn't always informative. "Aggregated" without a scale attached is nearly uninformative.
+
+at alrger scale, an aggregated pattern looks almost uniform.
+:::
+
+# 1.2 Anatomy of a point pattern {.center}
+## Characteristics
+
+All the methods here need **x–y coordinates** of point locations, plus:
+
+- a **window**: the study area boundary
+- optionally **marks**: attributes of points, categorical (e.g., used vs available, predator vs prey) or continuous (e.g., biomass, height)
+- optionally **covariates**: as a pixel image, e.g., elevation.
+
+::: notes
+READ then:
+The used/unused framing is the one that generalizes best for wildlife
+work: your points are available resource units, and the mark says
+whether they were used. That converts a resource-selection question into
+a point pattern question (Lancaster & Downes 2004).
+-
+That's exactly the cactus/insect example in Lab C
+Introduce spatstat's three data types now, since they structure the
+whole lab: ppp (point pattern), owin (window), im (pixel image).
+
+The window is the piece students underestimate, which is the next slide.
+:::
+
+## Sensitivity to window
+
+**Assumption:** the pattern was generated by a *single* point process over the entire study area.
+
+So the delineation of the study area, its size and location, affects the pattern you observe.
+
+Windows can be rectangular or highly irregular polygons.
+
+::: notes
+PPA is highly sensitive to the size and shape of the study boundary
+
+This is the extent problem.
+
+When is this assumption violated? All the time! The single-process assumption is strong and frequently violated. If half your plot is upland and half is wetland, that is arguably two processes, and pooling them will manufacture apparent aggregation that is really a habitat boundary.
+
+Cropping to a homogeneous subregion is the crude fix. Inhomogeneous models are the solution. 
+:::
+
+## Point pattern information content
+
+```{r}
+#| fig-width: 11.5
+#| fig-height: 7.2
+set.seed(11)
+Wd <- owin(c(0, 10), c(0, 10))
+Xd <- rMatClust(0.12, 1.1, 4, win = Wd)
+n  <- npoints(Xd)
+
+op <- par(mfrow = c(2, 2), mar = c(0.5, 0.5, 2.4, 0.5))
+
+# (a) points in a window
+plot(Xd, pch = 19, cex = 2, main = "(a) points + window (boundary)")
+
+# (b) bivariate mark: used / unused
+used <- factor(sample(c("used", "unused"), n, TRUE, prob = c(0.35, 0.65)))
+plot(ppp(Xd$x, Xd$y, window = Wd, marks = used),
+     cols = c("grey60", "firebrick"), chars = c(1, 19), cex = 2,
+     main = "(b) bivariate mark")
+
+# (c) continuous mark: size
+sz <- rlnorm(n, log(1), 0.5)
+plot(ppp(Xd$x, Xd$y, window = Wd, marks = sz),
+     markscale = 0.45, main = "(c) continuous mark")
+
+# (d) points on an underlying gradient
+gg <- seq(0.1, 9.9, length.out = 60)
+grad <- im(outer(gg, gg, function(yy, xx) sin(xx / 2.6) + cos(yy / 3.1)),
+           xcol = gg, yrow = gg)
+plot(grad, main = "(d) points on a covariate", ribbon = FALSE)
+plot(Xd, add = TRUE, pch = 3, cex = 1, col = "white")
+par(op)
+```
+
+::: notes
+Your point pattern could be as simple as a boundry/window and your coordinates. The points could contian categorical information such as used/unused. Or continuous information, such as group size.
+
+Panel (b) is the resource use/availability setup. Panel (d) is the
+inhomogeneous case: if the covariate drives intensity, the pattern will
+look clustered even with no biological aggregation at all.
+
+Panel (d) is the trap. Environmental heterogeneity and true aggregation
+produce the same signature in K. Distinguishing them requires either a
+covariate model (Lab D) or an assumption. This is the point-pattern
+version of the SA-env vs SA-sp distinction from Week 1's Figure 1.2.
+:::
+
+# 2.1 Point processes
+## Poisson point process
+> A **point process** is a random process producing realizations of point patterns across space and/or time.
+
+The most common: the **Poisson point process** — points are independently distributed in space, described by their intensity λ.
+
+- First-Order Intensity λ: Describes the density of points across space.
+
+- Second-Order Relationships: Relate to the spatial interaction between points (e.g., attraction, competition).
+
+::: notes
+"Independently distributed" means the presence
+of a point at one location tells you nothing about any other location. Almost no biological process satisfies this, which is exactly why it
+makes a useful null.
+
+First order: how many points, and where is density high? Second order:
+given a point, what's near it? 
+
+First-order properties represent the spatial trend (large-scale density). Second-order properties represent localized interactions (small-scale clustering or competition).
+Intensity λ is points per unit area — roughly density. Keep the
+distinction between the intensity FUNCTION lambda(x), which can vary
+across space, and a constant lambda.
+:::
+
+## Point intensity
+
+First-Order Intensity λ: Describes the density of points across space:  
+
+- **Homogeneous** (= stationary) — intensity is constant across the window
+
+- **Inhomogeneous** (= non-stationary) — intensity varies across space 
+
+Also **isotropy** — the process does not change with direction.
+
+::: notes
+If the density is constant across the window
+when Density varies across spatial or environmental gradients 
+
+When inhomogeneous, the usual objective is figuring out what explains the trend.
+
+Stationary and homogeneous are used interchangeably here. Isotropy is
+the directional analogue and is almost always assumed, rarely tested.
+
+Anisotropy is real and under-examined: patterns along a river corridor,
+a prevailing wind, or a contour are directional. Everything today
+assumes it away.
+:::
+
+## Thinned point processes
+
+> A **thinned** point process is one where the observed points are a *sample* of the underlying process.
+
+Thinning creates inhomogeneity in the intensity function **independent
+of the underlying process** from biology (e.g., mortality) or study design.
+
+::: notes
+**Presence-only SDM are thinned point data** (Warton & Shepherd 2010),
+often biased near roads, which biases model predictions (Elith et al.
+2006; Phillips et al. 2009).
+
+
+The logic: your MaxEnt "presence points" are a road-biased,
+effort-biased sample of an underlying point process. Fit a model to them
+and you have modelled the sampling as much as the species.
+
+Fithian et al. (2015) is the fix — estimate the thinning process by
+pooling survey data with opportunistic data. Renner et al. (2015) is the
+general treatment.
+
+Everything else today assumes a COMPLETE CENSUS of a region, which the
+cactus data is and eBird is not.
+:::
+
+# 2.2 Summarizing point patterns {.center}
+## Numerical summaries
+>**Numerical** summaries are global, one number for the whole study area.
+
+e.g., **mean/variance ratio** of quadrat counts, against a Poisson expectation:
+
+| Relationship     | Interpretation |
+|------------------|----------------|
+| mean \> variance | regularity     |
+| mean ≈ variance  | randomness     |
+| mean \< variance | aggregation    |
+
+But these give **no information about scale**, and they are contingent
+on how you drew the quadrats.
+
+::: notes
+The Poisson has mean equal to variance, which is why the ratio is diagnostic. Overdispersion means clustering.
+
+"Contingent on how you drew the quadrats" is the modifiable areal unit
+problem again. Change the quadrat size and you
+change the verdict.
+:::
+
+## Functional summaries 
+>**Functional** summaries are curves over distance *r*, which is how you get at scale.
+
+**First-order**: summarize points individually, no explicit relation to other points. The intensity function λ(*x*).
+
+**Second-order**: statistical relationships estimated from information in **pairs** of points. Number of points within distance *r* of a focal point.
+
+Higher-order statistics exist (triplets of points) but the overwhelming majority of practice is first- and second-order.
+
+::: notes
+Practical version: first order asks "where are there more points?"
+Second order asks "given a point here, what's within r?"
+Only second-order statistics can speak to interaction, which is why they dominate.
+
+Wiegand & Moloney (2014) cover third-order statistics for anyone curious. They exist, they're informative, and almost nobody uses them.
+:::
+
+# 3.1 Null models {.center}
+## Complete spatial randomness
+> a homogeneous Poisson process: Points occur independently with constant intensity
+
+Two assumptions:
+
+1.  the number of points *n* in a region follows a Poisson distribution
+    with mean λ = *n*/*A*
+2.  given *n*, points are an independent random sample, equally likely
+    anywhere — uniform over the study region
+
+::: notes
+Part 1 is about how many. Part 2
+is about where, given how many.
+
+"it is likely that CSR rarely occurs in nature." It
+is not a biological hypothesis, it is a reference point. Rejecting CSR
+tells you the pattern is non-random and nothing more — it does not tell you which process produced it.
+:::
+
+## Monte Carlo envelopes
+
+Simulate complete spatial randomness many times, at the observed *n*. Take the range of simulated curves as a **confidence envelope** (Baddeley et al. 2014).
+
+If the observed curve falls outside, there is evidence of pattern differing from complete spatial randomness.
+
+::: notes
+This is the workhorse and it is conceptually simple: build the sampling
+distribution of your statistic under the null by brute force.
+
+Watch out for one thing coming in Lab B: because the envelope is
+computed at MANY distances r, a pointwise envelope at a stated alpha
+cannot be used to reject the null at that alpha. That's a
+multiple-testing problem and it's pervasive in the published literature.
+:::
+
+## Other null models
+
+- **Cluster point processes** — assume aggregation
+
+  - **Matérn Cluster**: "Parent" points are random; "offspring" are distributed uniformly within a radius $r$ around parents.
+  - **Thomas Process**: Offspring are distributed around parents using a bivariate normal (Gaussian) distribution.
+
+- **Inhibition processes** — assume regularity
+  - **Matérn Inhibition**: Points are generated but deleted if they fall within a competitive threshold distance $r$ of another point.
+
+- **Environmental gradients** — use a known resource gradient as the
+  null, then ask whether points are aggregated *above and beyond* it
+  (Melles et al. 2009)
+
+::: notes
+The third option is where the science is. "Are these nests clustered?"
+is a weak question. "Are these nests clustered beyond what the
+distribution of suitable substrate explains?" is a real one.
+inhomogeneous
+point process
+
+Melles et al. (2009) did exactly this for songbird nesting —
+disentangling habitat drivers from social drivers of nesting pattern.
+Directly relevant to anyone in this room working on colonial or
+territorial species.
+
+Lab D and Lab E implement both routes.
+:::
+
+
+## Functions
+
+```{r}
+#| fig-width: 12
+#| fig-height: 4.4
+set.seed(21)
+px <- c(5.0, 6.9, 3.3, 7.6, 4.4, 8.4, 2.4, 6.1, 3.8, 7.1)
+py <- c(5.0, 6.4, 6.8, 3.6, 3.1, 6.9, 3.9, 8.1, 2.0, 5.2)
+
+op <- par(mfrow = c(1, 3), mar = c(0.6, 0.6, 2.6, 0.6))
+
+## (a) K / L : everything inside a disc of radius r
+plot.new(); plot.window(xlim = c(0, 10), ylim = c(0, 10), asp = 1)
+symbols(px[1], py[1], circles = 3.2, inches = FALSE, add = TRUE,
+        bg = "grey92", fg = "grey40")
+segments(px[1], py[1], px[1] + 3.2, py[1], lty = 2)
+text(px[1] + 1.6, py[1] + 0.4, "r", font = 3, cex = 2)
+points(px, py, pch = 19, cex = 2)
+points(px[1], py[1], pch = 15, cex = 2.5, col = "firebrick")
+box(col = "grey50")
+title("(a) K, L : all points within r", cex.main = 2)
+
+## (b) g : a ring at radius r, smoothed
+plot.new(); plot.window(xlim = c(0, 10), ylim = c(0, 10), asp = 1)
+symbols(px[1], py[1], circles = 3.6, inches = FALSE, add = TRUE,
+        bg = "grey92", fg = NA)
+symbols(px[1], py[1], circles = 2.8, inches = FALSE, add = TRUE,
+        bg = "white", fg = NA)
+symbols(px[1], py[1], circles = 3.2, inches = FALSE, add = TRUE,
+        fg = "grey35", lwd = 2)
+points(px, py, pch = 19, cex = 2)
+points(px[1], py[1], pch = 15, cex = 2.5, col = "firebrick")
+text(px[1] + 1.7, py[1] + 0.4, "r", font = 3, cex = 2)
+box(col = "grey50")
+title("(b) g : points in a ring at r", cex.main = 2)
+
+## (c) G : nearest neighbour only
+plot.new(); plot.window(xlim = c(0, 10), ylim = c(0, 10), asp = 1)
+points(px, py, pch = 19, cex = 2)
+points(px[1], py[1], pch = 15, cex = 2.5, col = "firebrick")
+d <- sqrt((px - px[1])^2 + (py - py[1])^2); d[1] <- Inf
+nnb <- which.min(d)
+arrows(px[1], py[1], px[nnb], py[nnb], length = 0.12, lwd = 2.5,
+       col = "firebrick")
+box(col = "grey50")
+title("(c) G : nearest neighbour distance", cex.main = 2)
+par(op)
+```
+
+::: notes
+Moving away from detecting patterns by numerical summeries, we can use functional summaries. Here are three geometries, three questions.
+
+(a) K uses everything inside the disc, so it is CUMULATIVE.
+(b) g uses only what's in a thin ring at r, so it is scale-LOCAL. The
+    grey band is the smoothing kernel bandwidth.
+(c) G uses only the single nearest neighbour, so it emphasizes the
+    shortest distances and ignores everything else.
+
+Ask which they'd use to detect clustering at exactly 5 m but not at 10
+m. Answer is g, and the reason is the cumulative-versus-local
+distinction that comes up three slides on.
+:::
+
+## Ripley's *K*
+
+The degree of spatial aggregation of points within a circle of radius *r*, compared to complete spatial randomness:
+
+$$K(r) = \frac{E}{\lambda}$$
+
+where λ = *n*/*A* and *E* = expected number of points within *r* of an
+arbitrarily chosen point, **excluding that point**.
+
+- *K*(*r*) larger than expected → clustering
+- *K*(*r*) smaller than expected → regularity
+
+::: notes
+Ripley (1976). The most-used second-order statistic in ecology by a wide
+margin.
+
+"Excluding that point" matters — otherwise every point contributes
+itself and you'd have a constant offset.
+
+Dividing by lambda is what makes it comparable across patterns of
+different density. Without that, K would just track abundance.
+:::
+
+## *K* under CSR, and the *r*² problem
+
+Area of a circle is π*r*², so under complete spatial randomness the expected count is
+$E_{\text{CSR}} = \lambda \pi r^2$, giving
+
+$$K(r)_{\text{CSR}} = \pi r^2$$
+
+That grows quadratically, which makes plots hard to read — deviations at
+large *r* dominate visually.
+
+::: notes
+This is why nobody plots raw K. The expected curve is a parabola, so
+eyeballing departures from it is unreliable, and the vertical scale is
+dominated by large r.
+
+The fix is linearization, next slide. It's purely cosmetic in the sense
+that no information changes — but it makes the plot readable, which
+matters.
+:::
+
+## Linearizing to *L* — two conventions
+
+**Expectation = *r*:** $$\hat L(r) = \sqrt{K(r)/\pi}$$ aggregation if
+*L*(*r*) \> *r*; regularity if *L*(*r*) \< *r*
+
+**Expectation = 0:** $$\hat L(r) = \sqrt{K(r)/\pi} - r$$ aggregation if
+*L*(*r*) \> 0; regularity if *L*(*r*) \< 0
+
+**Always check which one a figure uses.**
+
+::: notes
+That last line is not pedantry. Both conventions are common, both are
+called "L", and reading a figure under the wrong one inverts your
+interpretation of where the null line sits.
+
+spatstat's Lest uses expectation = r. To get expectation = 0 you plot
+with the formula `. - r ~ r`, which we do throughout the lab. Point that
+out when it first appears.
+:::
+
+## How *K* is actually computed
+
+$$\hat K(r) = A \frac{\sum_i \sum_{j \neq i} w_{ij} \, I(d_{ij} < r)}{n^2}$$
+
+- $d_{ij}$ — distance between points *i* and *j*
+- $I(\cdot)$ — indicator, 1 if $d_{ij} < r$, else 0
+- $w_{ij}$ — **weight correcting for edge effects**
+
+Ignore the weights and it simplifies to counting neighbours within *r*,
+scaled by intensity.
+
+::: notes
+Strip away the notation and it's: count all pairs closer than r, scale
+by density and area. That's it.
+
+The w term is the entire edge-correction literature compressed into one
+subscript, and it's the subject of three slides from now.
+:::
+
+## The pair correlation function *g*
+
+$$g(r) = \frac{dK(r)/dr}{2\pi r}$$
+
+The **slope** of *K* at radius *r*, divided by the circumference at *r*.
+
+- *g*(*r*) = 1 → CSR
+- *g*(*r*) \> 1 → aggregation
+- *g*(*r*) \< 1 → regularity
+
+::: notes
+Because it's a derivative, g isolates what happens AT r rather than out
+to r.
+
+In practice it's implemented either with a ring width (delta-r) or,
+better, with a smoothing kernel (Penttinen et al. 1992). Bandwidth is a
+real choice: too narrow and data sparseness makes the curve wiggle
+spuriously; too wide and it approaches K.
+
+The O-ring statistic of Wiegand & Moloney (2004) is a close relative:
+O(r) = lambda \* g(r).
+:::
+
+## Why *g* beats *K* for identifying scale
+
+*K* is **cumulative** — all points closer than *r* are used.
+
+So strong aggregation at 5 m makes *K* look aggregated at 10 m too,
+because *r* = 10 still contains everything inside 5.
+
+*g* is a derivative, so it localizes.
+
+*K* is simply the cumulative version of *g* (Baddeley 2007; Velázquez et
+al. 2016).
+
+::: notes
+This is the most practically useful methodological point in the chapter,
+and it shows up in the Lab B results: L suggests aggregation from 2-13
+m, while g localizes it to 2-6 m. The L signal at 8-13 m is an artefact
+of cumulation.
+
+Illian et al. (2008) recommend distance-based analyses either to
+complement or in place of K. Velázquez et al. (2016), one of this week's
+readings, found ecologists still overwhelmingly report K.
+
+If a paper reports only K and claims a scale, be sceptical.
+:::
+
+## The *G* function
+
+Cumulative distribution of **nearest-neighbour** distances. The
+"event-to-event" distribution.
+
+$$\hat G(r) = \frac{1}{N}\sum_i \mathbf{1}(d_i \leq r) \qquad
+G(r)_{\text{CSR}} = 1 - \exp(-\lambda \pi r^2)$$
+
+- *G*(*r*) \> *G*<sub>CSR</sub>(*r*) → distances shorter than expected →
+  aggregation
+- *G*(*r*) \< *G*<sub>CSR</sub>(*r*) → longer than expected → regularity
+
+::: notes
+Intuitive: the probability of finding your nearest neighbour within
+distance r.
+
+The catch: it ignores everything beyond the nearest neighbour, so it
+captures smaller-scale structure than K, L or g. Notice in Lab B that
+the r axis for G is much shorter — that's not a plotting choice, it's
+inherent.
+
+Useful side application: G gives you a way to interpret the spatial
+scaling of patch isolation, connecting to nearest-neighbour distance
+metrics from Chapter 3.
+
+The empty-space function F is the location-focused analogue. We skip it,
+as the book does.
+:::
+
+## Marks: bivariate and continuous
+
+**Bivariate (cross) *K*** — for two categorical point types:
+
+$$\hat K_{12}(r) = A \frac{\sum_i \sum_j I(d_{ij} < r)}{n_1 n_2}$$
+
+computed for $K_{12}$ and $K_{21}$, then averaged.
+
+**Mark correlation function** — for continuous marks:
+
+$$\hat K_m(r) = \sum_i \sum_{j \neq i} I_r \, m_i m_j$$
+
+Asks whether large values tend to be near other large values.
+
+::: notes
+A lovely connection the book points out: replace m_i \* m_j with (m_i -
+m_j)\^2 and the mark correlation function becomes nearly equivalent to
+the empirical variogram, which is Chapter 5's central tool. Same
+arithmetic, different tradition.
+
+Flag that now — it makes next week feel continuous with this week rather
+than a fresh start.
+
+Interpretation for the mark correlation: above 1 means large near large,
+below 1 means large near small.
+:::
+
+## Activity overview
+
+**Format:** Pairs
+
+**Materials:** 2 maps, 1 distance card, ruler
+
+Suppose you have a complete census of elk across a 2km × 2km block of the Blackfoot
+
+Your group's job: For each distance card, determine with numbers if elk locations on the maps are **aggregated**, **random**, or **regular**?
+
+::: notes
+Preparation:
+:::
+
+## Activity: Phase 1
+::: {.activity}
+>**0 - 3 minutes.** Look at Map A. In one word, please write down: Are these elk **clustered**, **random**, or **regular**?
+>
+>**2 - 4 minutes.** Propose a method to prove with numbers what you committed in the previous step.
+:::
+
+::: {.notes}
+Hand out Map A and give no other instructions. Do not mention distance, scale, or nulls.
+
+Everyone will write "clustered." That unanimity is the setup — it means the reversal in phase 4 lands on the whole room at once rather than on one unlucky
+group.
+
+Harvest proposals on the board. DO NOT EVALUATE ANY OF THEM.
+
+This phase is supposed to be uncomfortable. Two to three minutes of genuine
+floundering is the goal.
+
+EXPECT THESE PROPOSALS, and write all of them up without comment:
+
+  "Count elk in squares and see if some squares have more"
+      -> quadrats, a real method, and the one the hook uses
+  "Measure the distance to each elk's nearest neighbour"
+      -> the G function, arriving spontaneously
+  "Compare to a map where they're spread out evenly"
+      -> a null model, arriving spontaneously
+  "Calculate the average distance between all pairs"
+
+IF NOBODY MENTIONS A COMPARISON, ask: "clustered compared to WHAT?" and let the
+silence do the work. That question is the whole lesson, and it is far better if
+the room feels the need for it before you supply an answer.
+:::
+
+## Activity: Phase 2
+::: {.termbox}
+Here is the measurement we will make: for a typical elk, count how many OTHER elk lie within distance *r* of it.
+
+To know whether that count is a lot, you need to know what **randomness** would have given you.
+:::
+
+::: {.activity}
+>There are 60 elk in 4 km². If those 60 elk were scattered **at random** across the block, how many would you expect to find inside a circle of radius *r*?
+>
+> Work it out. You have everything you need.
+:::
+
+::: {.notes}
+DO NOT HAND THEM THE FORMULA. They will get there in about ninety seconds, and it
+is the last thing in this activity they can own.
+
+The route: density = 60 / 4 = 15 elk per km². Area of a circle = pi r squared.
+Expected = 15 x pi r squared, with r in kilometres.
+
+RESCUE PROMPT, if a group stalls past a minute: "if there were 15 elk per square
+kilometre, how many sit inside a circle of 0.28 square kilometres?" That is
+enough; do not finish it for them.
+
+WATCH FOR THE UNITS TRAP. Several groups will work in metres and get an answer
+thousands of times too big. Let them discover it by sanity-checking against the
+map: a 100 m circle cannot contain 47,000 elk. Units errors caught by physical
+plausibility are worth more than units errors caught by you.
+
+ONCE A GROUP HAS IT, write their formula on the board in their notation and leave
+it up. Phase 3 refers back to it.
+
+STILL SAY NOTHING about scale-dependence, nulls, grain, or which map to use.
+
+IF ASKED "which r?" -> "whichever one is on your card."
+IF ASKED "which map?" -> "you decide, and be ready to justify it."
+:::
+
+## Activity: Phase 3
+::: {.activity}
+> Pick a distance (m) and follow the steps below.
+>
+1. **Measure the scale bar** on each map with your ruler. Work out how many
+   millimetres equal one metre **on each map**.
+2. **Decide which map** your question can be answered on. Be ready to justify it.
+3. **Pick three focal elk.** For each, draw a circle of radius *r* and count how
+   many other elk fall inside.
+4. Average your three counts → **observed**.
+5. Compute **expected**, using **the formula your group just derived**.
+6. Report **observed ÷ expected**. That ratio is your answer.
+:::
+
+::: {.notes}
+DISTANCE CARDS: 8 m, 30 m, 100 m, 500 m — one per group.
+
+WHAT EACH RADIUS BECOMES ON EACH MAP (for you, not for them):
+
+           Map A        Map B
+   8 m     0.8 mm       8 mm
+  30 m     3 mm         30 mm
+  100 m    10 mm        100 mm
+  500 m    50 mm        off the map
+
+WHAT WILL HAPPEN, GROUP BY GROUP.
+
+GROUP A (8 m) tries Map A, finds 8 m is under a millimetre, and gets stuck. LET
+THEM STAY STUCK FOR A FULL MINUTE before nudging: "is there another map on your
+desk?" That moment of being unable to ask the question is discovery 3, and it is
+worth the discomfort.
+
+GROUP B (30 m) has the same experience in milder form — 3 mm is drawable but
+uncountable, because the herd is a smudge. They should migrate to Map B.
+
+GROUP C (100 m) on Map B will find a 100 mm radius runs off the sheet. The
+elegant route is to measure the herd's greatest dimension (60 m) and realise
+every 100 m circle therefore contains the entire herd, so the answer is 19
+without drawing anything. If a group gets there, have them present it.
+
+GROUP D (500 m) must use Map A, because 500 m does not exist on Map B. Their
+circle covers a quarter of the landscape and still contains only their own
+cluster.
+
+Everyone will notice they are measuring ELK TO ELK — not to a habitat edge, not a
+cell size. Do not say so. Ask it in phase 6.
+:::
+
+## Activity: Phase 4
+
+Each group reports one ratio.
+
+| *r* | Expected | Observed | **Ratio** |
+|---|---|---|---|
+| 8 m | | | |
+| 30 m | | | |
+| 100 m | | | |
+| 500 m | | | |
+
+::: {.activity}
+**So — are elk clustered?**
+
+:::
+
+::: {.notes}
+Write only what groups report. Let the pattern emerge in front of them — build
+the table live rather than projecting the filled version.
+
+DISCOVERY 1. Let the room fight about it. Someone will say "clustered at some
+distances and not others," and when they do, write their sentence on the board
+VERBATIM and put their name next to it. That sentence is the chapter.
+
+Only AFTER they have said it do you supply the vocabulary: dispersion is not a
+property of a point pattern, it is a property of a point pattern AT A STATED
+DISTANCE — which is why K, g and G are functions of r rather than single numbers.
+
+DISCOVERY 3 falls out here too. Ask Group A what happened when they tried Map A.
+Their answer is that the question could not be asked. Extent determines which
+distances you have any hope of resolving.
+
+IF THE RATIO COLUMN CONFUSES ANYONE: 1.0 means exactly as many neighbours as
+randomness predicts, above 1 means more, below 1 means fewer.
+:::
+
+## Activity: Phase 4 
+
+| *r* | From map | How they got *observed* | Expected | Observed | **Ratio** |
+|---|--|------|---|---|--|
+| **8 m** | **B** | count inside an 8 mm circle | 0.003 | **0** | **0** |
+| **30 m** | **B** | count inside a 30 mm circle | 0.042 | 11.1 | **≈ 260** |
+| **100 m** | **B** | The entire herd fits in 60m | 0.471 | 19 | **≈ 40** |
+| **500 m** | **A** | count inside a 50 mm circle → no other cluster reached | 11.78 | 19 | **≈ 1.6** |
+
+
+::: {.notes}
+Project this only after the live table is built, as a check.
+
+THREE ROWS COME FROM MAP B, ONE FROM MAP A. That is not sloppiness — which map a
+group CAN use is determined by their radius, and the boundary sits between 100 m
+and 500 m. Fill in the "From map" column as groups report, and then ask the room
+why the column is not all the same. The answer is discovery 3.
+
+Every observed value is exact, because the elk sit on a 12 m lattice: a 5 by 4
+grid at 12 m spacing gives mean neighbour counts of 0 at 8 m, 11.1 at 30 m, and 19
+(everyone) at any r above 60 m.
+
+Groups may be off by a neighbour or two depending on which focal elk they chose —
+worth naming, since it is why you average over several focal points rather than
+trusting one.
+
+At 500 m the nearest elk in another herd is about 1002 m away, so a 500 m circle
+still contains only the group's own cluster. Hence 19 again, but now against an
+expectation of 11.78 — the signal has washed out.
+
+TWO THINGS A SHARP STUDENT WILL RAISE. Have both ready.
+
+"MAP B ONLY SHOWS ONE OF THE THREE HERDS — how do you know the others look like
+it?" You don't, from Map B alone. Groups A, B and C are all making a claim about
+ONE herd and generalising. Here the three herds are identical by construction, so
+it happens to be safe. The honest answer is that checking that assumption is
+exactly what a real analysis does by averaging over many focal points spread
+across the whole window. This is a genuinely good objection — say so.
+
+GROUP D HAD TO USE BOTH MAPS. At 1 mm = 10 m their own herd is a 5 mm smudge, so
+they cannot resolve 20 dots inside it. Most groups will infer "about 20" rather
+than count, or go to Map B for the count and return to Map A to confirm nothing
+else falls within 50 mm. THAT TWO-MAP WORKFLOW IS THE RIGHT ANSWER and is worth
+naming out loud: Group D needed Map A for what is ABSENT at 500 m and Map B for
+what is PRESENT at close range. No single extent could answer their question.
+:::
+## Activity: Phase 5
+
+On Map B (one herd, 20 elk in a 180 × 180 m frame), we found **zero** neighbours within 8 m. Ratio equals 0, fewer than random.
+
+::: {.activity}
+> **Have we proved that elk avoid standing close together?**
+:::
+
+::: {.termbox}
+A **close pair**: two elk standing closer together than 8 m.
+
+Before you can call zero a finding, you have to ask:
+**would randomness have given us zero too?**  
+
+:::
+
+::: {.notes}
+Let them argue for a minute before you touch the arithmetic.
+
+DEFINE "PAIR" OUT LOUD, because the next slide depends on it. Pick any two elk,
+measure between them; if that distance is under 8 m they are a close pair. The
+question is how many such pairs randomness would produce.
+
+THE LOGIC TO LAND: if randomness also produces zero, then finding zero tells you
+nothing about elk. You have not measured the elk — you have measured the fact
+that 8 m is a very small circle.
+
+Do not run this slide together with the next one. The pause between "you might
+have nothing" and "watch what happens when we change the window" is what makes
+the reversal land.
+:::
+
+
+## Activity: Phase 5
+
+**Work it out for Map B, 20 elk in a 180 × 180 m frame.**
+
+density = 20 ÷ 0.0324 km² = **617 elk per km²**
+
+expected neighbours per elk = 617 × π(0.008)² = **0.124**
+
+expected pairs = 20 × 0.124 **÷ 2** = **1.24 pairs**  
+
+
+
+- Why divide by two? Every pair got counted twice — elk A counts B as a neighbour, and B counts A.
+
+- Randomness on Map B predicts about **1.2** close pairs. You would see **zero about 29% of the time.**
+
+::: {.notes}
+THE DIVIDE-BY-TWO IS THE STEP PEOPLE SKIP. Make them say why.
+
+"1.24 PAIRS" IS NONSENSE AS A LITERAL OBJECT, so explain it as a rate: scatter 20
+elk at random in this frame, count the close pairs, write it down, and repeat a
+thousand times. You would average 1.24 pairs per attempt — which means zero
+happens about 29% of the time.
+
+That framing is far more persuasive than "1.24 is a small number." Say it as: a
+zero here is roughly a one-in-three outcome under the hypothesis Group A thinks
+they have rejected.
+
+WHY MAP B AND NOT MAP A. Group A counted on Map B, so the expectation has to be
+computed for Map B. Mixing windows — observing on one map and expecting on
+another — is the exact error this phase teaches, and it is easy to commit by
+accident. If you had used the whole-block density of 15 per km2 here you would
+have got 0.09 pairs and a P(zero) of 91%: same conclusion, wrong arithmetic.
+
+The 29% figure treats close-pair counts as Poisson. Fine at this magnitude.
+:::
+
+## Activity: Phase 5
+
+What if we change the window?
+
+| Window | Density | Expected pairs | Zero surprising? | Verdict |
+|-----|--|--|---|---|
+| The whole 2 × 2 km block | 15/km² | 0.09 | No — ~**91%** of the time | regular, **undetectable** |
+| Map B's 180 m frame | 617/km² | 1.24 | No — ~**29%** of the time | regular, **undetectable** |
+| The 60 × 48m patch the herd occupies | 6,944/km² | 14.0 | **Yes** | **regular, and demonstrated** |
+
+::: {.notes}
+DISCOVERY 4, and the deepest thing available in this chapter.
+
+Build the table row by row on the board rather than projecting it. Each row is the
+same three-step calculation with one number changed, and watching the answer move
+CONTINUOUSLY with the window is the whole point — it is far better than jumping
+between two cherry-picked extremes.
+
+THEN ASK THE ROOM WHICH WINDOW IS CORRECT. Let them fail to answer. That failure
+is the lesson: there is no principled stopping rule. The analyst picks the window,
+and the picking determines the finding. It is why Chapter 4 spends its length on
+null models rather than on statistics.
+
+HAVE THIS READY: someone will ask why the herd box is 60 x 48 rather than 48 x 36,
+the exact span of the elk. Because the tight bounding box assumes elk occupy no
+space and inflates the density further. A tighter box gives an even stronger
+result — which is itself another turn of the same screw.
+
+DO NOT EXTEND ANY OF THIS TO r = 30 m. With the herd window the formula returns
+196 expected pairs from a herd that has only 190 pairs in total, because a 30 m
+radius does not fit inside a 60 x 48 m box. If a quick group tries it and gets
+nonsense, praise them — they have found an edge effect, which is Sheet D item (a)
+in the gauge.
+
+:::
+
+## Activity debrief
+
+| What we found | The name for it |
+|---|---|
+| The verdict changes with the distance you ask about | **Dispersion is scale-dependent** |
+| We were measuring elk-to-elk distances. No pixel, no quadrat, no grain | ***r* is the scale of analysis** |
+| We couldn't ask the 8m question on a 2km map | **Extent limits detectable scales** |
+| Same *r*, two densities, opposite results | **The null model decides the answer** |
+
+
+::: {.notes}
+ASK, DON'T TELL. For each row, ask "what did we actually find out?", write their
+words, then add the term beside it. The terms stick because they are labels for
+something the room already owns.
+
+ROW 2 IS THE ONE THEY WILL NOT VOLUNTEER, so prompt it: "what two things were you
+measuring the distance between?" Elk and elk. "So what was the grain of this
+analysis?" There wasn't one. Point patterns are the only data type in this course
+with NO GRAIN AT ALL, because exact coordinates mean there is no aggregation unit.
+Students arriving from Lessons 2 and 3 have been trained to hear every distance as
+grain or extent, and this is where you break it.
+
+TWO OPTIONAL FOLLOW-UPS IF TIME REMAINS.
+
+FIRST- VERSUS SECOND-ORDER. Which of the verdicts is about the environment and
+which about the elk? Three clusters a kilometre apart is FIRST-ORDER — intensity
+varies because habitat does, and it would hold even if elk ignored each other
+entirely. The 8 m spacing is SECOND-ORDER — points responding to other points, and
+it would happen in a perfectly uniform meadow.
+
+PROCESS VERSUS PATTERN. "Same census tomorrow at 7 a.m. — same map?" No: different
+coordinates, same rules. The point PROCESS is the rule elk follow; the point
+PATTERN is where they happened to stand on Tuesday. You only ever observe the
+second and you are always trying to infer the first.
+:::
+
+::: notes
+Dispersion is not a property of a point pattern; it is a property of a point pattern **at a stated
+distance**. That is why K, g, and G are functions of r rather than single numbers.
+
+
+PROCESS VS PATTERN. "Fly again tomorrow at 7 a.m. — same map?" No:
+different coordinates, same rules. The point PROCESS is the rule elk
+follow; the point PATTERN is where they happened to stand on Tuesday.
+You only ever observe the second and you are always trying to infer the
+first.
+
+Closing line: *"Clustered compared to what?" is not a pedantic question.
+It is the entire chapter.*
+:::
+
+
+
+# 3.2 Edge effects {.center}
+
+## What goes wrong at the boundary
+
+Near the study area boundary you have no information about points
+outside.
+
+So a circle of radius *r* centred near the edge contains fewer observed points than the truth.
+
+Uncorrected statistics are therefore **biased** — and biased
+increasingly at large *r*, because bigger circles overlap the boundary
+more.
+
+::: notes
+The direction of bias is predictable and worth stating: uncorrected K
+and L will tend to DECLINE at large r, which can masquerade as
+regularity at large scales.
+
+We'll see exactly that artefact in Lab B when we compare corrected to
+uncorrected curves.
+:::
+
+## Corrections
+
+```{r}
+#| fig-width: 11
+#| fig-height: 5.4
+set.seed(8)
+ex <- runif(28, 0, 10); ey <- runif(28, 0, 10)
+
+op <- par(mfrow = c(1, 2), mar = c(0.6, 0.6, 2.8, 0.6))
+
+## (a) isotropic weighting
+plot.new(); plot.window(xlim = c(-4, 11), ylim = c(-2.5, 12.5), asp = 1)
+symbols(8.6, 5, circles = 3.4, inches = FALSE, add = TRUE,
+        bg = "grey93", fg = "grey45")
+rect(0, 0, 10, 10, border = "grey25", lwd = 2)
+points(ex, ey, pch = 19, cex = 0.9)
+points(8.6, 5, pch = 15, cex = 1.8, col = "firebrick")
+# points that would exist outside but are unobserved
+points(c(11.4, 10.9, 11.8), c(4.2, 6.6, 5.4), pch = 1, cex = 1.1,
+       col = "grey55")
+text(0.2, 11.6, "(a) isotropic weighting", adj = 0, cex = 1.15, font = 2)
+text(-3.8, -1.9, "w = 1 / (fraction of\ncircumference inside)",
+     adj = 0, cex = 0.95)
+
+## (b) toroidal shift
+plot.new(); plot.window(xlim = c(-4, 11), ylim = c(-2.5, 12.5), asp = 1)
+rect(0, 0, 10, 10, border = "grey25", lwd = 2)
+points(ex, ey, pch = 19, cex = 0.9)
+# wrapped copies
+points(ex - 10, ey, pch = 1, cex = 0.7, col = "grey60")
+points(ex, ey + 10, pch = 1, cex = 0.7, col = "grey60")
+arrows(9.4, 11.1, 0.6, 11.1, length = 0.11, lwd = 2, col = "firebrick")
+arrows(-1.2, 0.6, -1.2, 9.4, length = 0.11, lwd = 2, col = "firebrick")
+text(0.2, 11.9, "(b) translate / toroidal shift", adj = 0, cex = 1.15,
+     font = 2)
+text(-3.8, -1.9, "wrap the plot onto a torus;\nno weights needed",
+     adj = 0, cex = 0.95)
+par(op)
+```
+
+::: notes
+Isotropic (Ripley 1988): if the circle is entirely inside, w = 1. If
+half the circumference is outside, w = 2 for points inside. Intuitive,
+but works poorly for irregular complex boundaries.
+
+Translate (toroidal): wrap the window like a torus so the pattern has no
+edge. Works on ALL window geometries, which is why it's the
+general-purpose default and what we use in the lab.
+
+The open circles in (a) are the points you don't get to see. That's the
+whole problem in one visual.
+:::
+
+## When *not* to correct
+
+If the boundary is a **hard, true boundary** for the points, correcting
+is wrong (Lancaster & Downes 2004).
+
+Examples: a pond edge for aquatic larvae; an island coastline; a fenced
+enclosure.
+
+The correction assumes points *could* exist outside. Sometimes they
+can't.
+
+::: notes
+Good discussion prompt: is your study plot boundary real or arbitrary?
+Almost always arbitrary, which is why correction is almost always right
+— but the exceptions matter and nobody thinks about them.
+
+A stream reach for benthic insects, a habitat patch boundary for a
+specialist, a lake shore. In those cases the "missing" points genuinely
+do not exist and inflating your counts invents them.
+:::
+
+## What all of this assumes
+
+- **Stationarity** (homogeneity) — intensity constant over space
+- **Isotropy** — no directional dependence
+- **Complete census**, not a sample
+
+The functions can be extended to inhomogeneous processes (Lab D).
+Isotropy usually just gets assumed.
+
+On sampling: randomly thinning a Poisson process leaves a Poisson
+process, so random samples are defensible. **Biased** samples are not.
+
+::: notes
+That last point is subtle and worth stating carefully. Random thinning
+preserves Poisson-ness, so a random subsample doesn't invalidate a CSR
+test. Systematic or biased thinning does.
+
+Which brings back the presence-only problem: road-biased occurrence
+records are biased, not random, thinning. Everything today would be
+invalid on them.
+:::
