@@ -50,7 +50,7 @@ title-slide-attributes:
 ::: notes
 spatstat is a massive, incredibly powerful package. It separates the point locations (ppp) from the boundary window (owin) because boundary shape affects Ripley's K calculations and requires edge corrections.
 :::
-```{webr}
+```{r}
 #| message: false
 library(spatstat)
 
@@ -91,7 +91,7 @@ We'll use a simulated representation of the Florida cactus plot to demonstrate s
 
 ## Simulate patterns
 
-```{webr}
+```{r}
 #| label: veg-covariate
 #| fig-width: 7
 #| fig-height: 6
@@ -113,7 +113,7 @@ outer(X, Y, FUN) builds every combination of the two input vectors and applies F
 
 ## An inhomogeneous Thomas process
 
-```{webr}
+```{r}
 #| label: simulate-cactus
 #| fig-width: 7
 #| fig-height: 6.4
@@ -159,7 +159,7 @@ mentioning as a practical tip: rescale before fitting trend models.
 ## Visualization
 First-order density can be estimated using a kernel smoother with a specified bandwidth.
 
-```{webr}
+```{r}
 #| label: summary-density
 #| fig-width: 11.5
 #| fig-height: 5.2
@@ -184,7 +184,7 @@ Kernel smoothing shows us areas of high local density. However, is this density 
 
 ## Quadrat counts and a chi-square test
 
-```{webr}
+```{r}
 #| label: quadrat
 #| fig-width: 11.5
 #| fig-height: 5.2
@@ -212,7 +212,7 @@ Live demo if you have time: rerun with nx = 2 and nx = 8 and watch the p-value m
 
 ## *K* and *L*, ignoring edges
 
-```{webr}
+```{r}
 #| label: fig-K-L
 #| fig-width: 12.5
 #| fig-height: 4.4
@@ -262,7 +262,7 @@ uncorrected curves.
 
 ## Edge corrections compared
 
-```{webr}
+```{r}
 #| label: fig-edge-compare
 #| fig-width: 12.5
 #| fig-height: 4.6
@@ -294,7 +294,7 @@ choice.
 To test for non-randomness, we fit the L-function and compare it to **Monte Carlo confidence envelopes under complete spatial randomness**.  
 
 - If the solid observed line **climbs above the shaded gray envelope**, the point pattern is **statistically aggregated** at those scales.
-```{webr}
+```{r}
 #| label: fig-envelope-L
 #| fig-width: 9.5
 #| fig-height: 5.4
@@ -347,7 +347,7 @@ Report which you used. Most papers don't.
 
 ## The pair correlation function
 
-```{webr}
+```{r}
 #| label: fig-pcf
 #| fig-width: 11.5
 #| fig-height: 5.2
@@ -380,7 +380,7 @@ at 2-6 m. The difference is cumulation, not signal.
 
 ## The *G* function
 
-```{webr}
+```{r}
 #| label: fig-G
 #| fig-width: 9.5
 #| fig-height: 5.4
@@ -466,7 +466,7 @@ Is the insect herbivore (*Chelinidea*) aggregated on specific cacti, or is its d
 
 ## Build the marked pattern
 
-```{webr}
+```{r}
 #| label: marked-pattern
 #| fig-width: 11
 #| fig-height: 5
@@ -504,7 +504,7 @@ convenience.
 
 ## The naive analysis
 
-```{webr}
+```{r}
 #| label: fig-naive-bug
 #| fig-width: 9.5
 #| fig-height: 5.2
@@ -535,7 +535,7 @@ Wrong null, wrong answer.
 
 ## Condition on availability: random labelling
 
-```{webr}
+```{r}
 #| label: fig-random-label
 #| fig-width: 9.5
 #| fig-height: 5.2
@@ -606,7 +606,7 @@ That last one is directly relevant to the SCR work in this room — and it's why
 
 ## Continuous marks: is size clustered?
 
-```{webr}
+```{r}
 #| label: fig-markcorr
 #| fig-width: 11.5
 #| fig-height: 5.2
@@ -678,7 +678,7 @@ statistical model with assumptions you can check.
 
 ## Fit models
 
-```{webr}
+```{r}
 #| label: ppm-fit
 pp_int  <- ppm(cactus ~ 1)                      # homogeneous
 pp_xy   <- ppm(cactus ~ x + y)                  # linear trend
@@ -743,7 +743,7 @@ raster before fitting anything.
 
 ## Predictions
 
-```{webr}
+```{r}
 #| label: fig-ppm-trend
 #| fig-width: 11.5
 #| fig-height: 5.2
@@ -775,7 +775,7 @@ reasonable while the standard errors are too small.
 
 ## Dispersion 
 
-```{webr}
+```{r}
 #| label: fig-Linhom
 #| fig-width: 9.5
 #| fig-height: 5.4
@@ -814,7 +814,7 @@ a regression.
 
 ## Two cluster processes
 
-```{webr}
+```{r}
 #| label: fig-cluster-processes
 #| fig-width: 11.5
 #| fig-height: 5.2
@@ -856,7 +856,7 @@ on the Matern kernel is the whole difference.
 
 ## Fitting a cluster process as the null
 
-```{webr}
+```{r}
 #| label: kppm-fit
 fit_thomas <- kppm(cactus ~ 1, clusters = "Thomas")
 fit_thomas
@@ -883,7 +883,7 @@ data.
 
 ## Envelopes under a cluster null
 
-```{webr}
+```{r}
 #| label: fig-cluster-envelope
 #| fig-width: 11.5
 #| fig-height: 5.2
@@ -921,7 +921,7 @@ null is the true mechanism.
 
 ## Simulating point processes
 
-```{webr}
+```{r}
 #| label: fig-simulate
 #| fig-width: 11.5
 #| fig-height: 5.6
@@ -1056,7 +1056,7 @@ pattern. Reconcile those.
 Generate a random Poisson process and a clustered Thomas process. Fit the G-function (nearest neighbor distance) for both and compare their curves.
 :::
 
-```{webr}
+```{r}
 #| label: ex-g-func
 #| fig-cap: "G-function (nearest-neighbor distance) of the clustered point pattern"
 library(spatstat)
@@ -1084,7 +1084,7 @@ The G-function rises very rapidly at small distances for clustered patterns beca
 Fit a spatial trend model to the simulated cactus dataset. Predict and map the estimated trend across the plot.
 :::
 
-```{webr}
+```{r}
 #| label: ex-ppm-fit
 #| fig-cap: "Predicted intensity surface along the X coordinate, with observed points overlaid"
 library(spatstat)
