@@ -7,7 +7,7 @@ lang: en
 format:
   live-revealjs:
     self-contained: true
-    theme: [serif, custom.scss]
+    theme: [serif, wild541.scss]
     slide-number: true
     show-slide-number: all
     scrollable: true
@@ -20,9 +20,7 @@ title-slide-attributes:
   data-background-image: "images/cover-ch1.jpg"
   data-background-size: "30%"
   data-background-position: "right 1px bottom 1px"
-editor: 
-  markdown: 
-    wrap: 72
+  
 ---
 
 {{< include ./_extensions/r-wasm/live/_knitr.qmd >}}
