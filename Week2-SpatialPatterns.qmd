@@ -45,7 +45,7 @@ Today we talk about dependence due to space and where it hides. We start to talk
 
 **Autocorrelation** is the relationship between values of a variable with itself according to distance.
 
-![](images/autocheck.PNG){fig-align="center"}
+![](images/autocheck.png){fig-align="center"}
 
 ::: notes
 Last week we talked about the role of space covered some theoretical foundation for the role of space in ecological studies and touched on the importance of incorporating spatial information.
