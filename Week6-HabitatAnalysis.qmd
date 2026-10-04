@@ -1,0 +1,1557 @@
+---
+title: "WILD 591 – Spatial Population Modeling"
+subtitle: "Lesson 8: Space Use and Habitat Selection"
+author: "Mahdieh Tourani"
+date: last-modified
+lang: en
+format:
+  live-revealjs:
+    self-contained: true
+    theme: [serif, wild541.scss]
+    slide-number: true
+    show-slide-number: all
+    scrollable: true
+    controls: true
+    width: 1050
+    height: 700
+    margin: 0.1
+engine: knitr
+title-slide-attributes:
+  data-background-image: "images/cover-ch1.jpg"
+  data-background-size: "30%"
+  data-background-position: "right 1px bottom 1px"
+  
+---
+
+{{< include ./_extensions/r-wasm/live/_knitr.qmd >}}
+# Where we're going {.center}
+
+## Roadmap for today
+
+1.  Habitat analysis
+2.  Availability
+
+# 1.1 Habitat analysis
+
+## Space Use and Habitat Selection
+
+- Habitat selection theory predicts how individuals choose resources to
+  maximize fitness:
+  - Ideal Free Distribution: Animals distribute themselves
+    proportionally to resource availability to maximize fitness.
+- Key goals:
+  - Estimate space use and home ranges from animal tracking data.
+  - Quantify resource selection - points vs steps.
+
+::: notes
+On Tues we started to talk about habitat analysis. We covered
+terminology, use vs selection vs preference vs available, habitat
+theory, and introduced resource selection function as a heterogeneous
+point process. Today, we We will explore how to take raw telemetry
+points and map individual home ranges, estimate utilization
+distributions, and analyze selection functions.
+:::
+
+## Selection
+
+> The disporportionate use of resources relative to their availability.
+
+Resource selection operates as a hierarchical process(Johnson 1980):
+
+- **1st Order**: Selection of the physical geographical range of a
+  species. e.g., Where within the former range should we reintroduce
+  this species?
+
+- **2nd Order**: Selection of an individual's home range/territory
+  within the species' range e.g., Why did this panther put its home
+  range here rather than 20 km east?
+
+- **3rd Order**: Selection of habitat components (e.g., forest types)
+  within the home range. e.g, Within its home range, why does it rest in
+  palmetto thickets?
+
+- **4th Order**: Actual consumption of specific resources or food items
+  at a feeding site. e.g., Which individual deer does it kill?
+
+::: notes
+I showed you GPS tracks of 6 Florida panther individuals.
+:::
+
+## Study Designs
+
+- Study Designs (Thomas and Taylor 2006):
+  - **Design I**: Population-level measurements; individuals are not
+    identified. i.e., Animal density along a forest-cover gradient; no
+    marked individuals
+
+  - **Design II**: Use measured for individual animals, but availability
+    measured at the population level. i.e., Individual GPS fixes vs one
+    study-area availability layer
+
+  - **Design III**: Both use and availability measured separately for
+    each tracked individual. i.e., Individual GPS fixes vs availability
+    inside each animal's home range
+
+  - **Design IV**: Repeated, paired use and local availability
+    measurements over time. i.e., Use and availability paired at every
+    time step for every animal
+
+::: notes
+Speaker Notes: When studying resource selection, An animal might select
+coniferous forest when establishing its home range (2nd order
+selection), but within that home range, it might spend most of its time
+in hardwood swamps (3rd order selection). Thomas and Taylor classified
+study designs based on whether we track individuals (Design II & III) or
+pool them at the population scale (Design I). Design I has no marked
+individuals, so selection is inferred at the population level. That is
+why it blurs into species distribution modelling
+:::
+
+## Home Range and Space Use
+
+- **Utilization Distribution (UD)**: the two-dimensional relative
+  frequency distribution of an animal's position over a given period
+  (Van Winkle 1975).
+
+- **Common Home Range Estimators**:
+
+  - **Minimum Convex Polygon (MCP)**: Draws a polygon around the
+    outermost locations. Highly sensitive to sample size and outliers.
+  - **Kernel Density Estimation (KDE)**: Fits bivariate normal kernels
+    over points to create smooth probability density contours.
+  - **Local Nearest-Neighbor Convex Hull (LoCoH)**: A non-parametric
+    method that constructs localized convex hulls around each point and
+    its $k-1$ neighbors. Excellent for identifying hard boundaries
+    (e.g., rivers, fences).
+  - **Brownian Bridge Movement Model (BBMM)**: Integrates the path
+    trajectory and elapsed time between consecutive telemetry points to
+    model movement corridors.
+
+::: notes
+Speaker Notes: A home range is not just a hard border; it is a
+continuous probability of use (the Utilization Distribution). MCP is the
+oldest estimator but is highly flawed because it overestimates area. KDE
+creates beautiful smooth contours but can smooth over boundaries. LoCoH
+is excellent for identifying barriers. Finally, Brownian Bridges
+incorporate the actual sequential trajectory of movement, modeling the
+path between consecutive locations.
+
+An MCP gives you a boundary and no intensity. Kernel, LoCoH and Brownian
+bridge all give you a UD.
+:::
+
+# 1.2 Example designs
+
+## Simulate data
+
+```{r}
+#| include: false
+library(terra); library(survival); library(sf)
+MAROON <- "#70002E"; GREEN <- "#1D3C34"; WHEAT <- "#EFE8D4"
+
+smooth_r <- function(templ, w, passes = 2) {
+  r <- rast(templ); values(r) <- rnorm(ncell(r))
+  for (i in seq_len(passes)) {
+    r <- focal(r, w = w, fun = "mean", na.rm = TRUE)
+    r <- ifel(is.na(r), global(r, "mean", na.rm = TRUE)[[1]], r)
+  }
+  r
+}
+
+set.seed(801)
+templ <- terra::rast(nrows = 400,
+                     ncols = 400,
+                     xmin  = 550000,
+                     xmax  = 750000,
+                     ymin  = 150000,
+                     ymax  = 350000, 
+                     crs   = "EPSG:26917")
+surf <- smooth_r(templ, 15)
+cls <- c("coastalwetland", "barrenland", "cropland", "pasture/grassland",
+         "openwater", "freshwatermarsh", "scrub/shrub", "dryprairie",
+         "hardwoodswamp", "uplandforest", "cypressswamp", "pinelands",
+         "urban", "exotics")
+pcl <- c(0.06, 0.01, 0.09, 0.14, 0.04, 0.13, 0.05,
+         0.05, 0.08, 0.09, 0.07, 0.11, 0.06, 0.02)
+brk  <- quantile(values(surf), c(0, cumsum(pcl / sum(pcl))), na.rm = TRUE)
+land <- classify(surf, cbind(brk[-length(brk)], brk[-1], seq_along(cls)),
+                 include.lowest = TRUE)
+names(land) <- "landcover"
+
+## masks BEFORE assigning factor levels, so these are plain numeric comparisons
+wetforest <- ifel(land == 9  | land == 11, 1, 0)
+dryforest <- ifel(land == 10 | land == 12, 1, 0)
+levels(land) <- data.frame(id = seq_along(cls), landcover = cls)
+
+w5   <- ifelse(focalMat(land, 5000, "circle") > 0, 1, 0)
+ones <- rast(land); values(ones) <- 1
+n5   <- focal(ones, w = w5, fun = "sum", na.rm = TRUE)
+wet5 <- focal(wetforest, w = w5, fun = "sum", na.rm = TRUE) / n5
+dry5 <- focal(dryforest, w = w5, fun = "sum", na.rm = TRUE) / n5
+names(wet5) <- "wetforest"; names(dry5) <- "dryforest"
+hab  <- c(wet5, dry5)
+
+## ---- tracks: the generating model IS a step-selection function ----------
+b_wet <- 0.72; b_dry <- 2.18; k_pull <- 0.06
+set.seed(802)
+sl_pool <- rgamma(600, shape = 2, scale = 2600)
+ta_pool <- ((rnorm(600, 0, 1.1) + pi) %% (2 * pi)) - pi
+
+sim_cat <- function(n_steps, centre, n_prop = 20) {
+  xy <- matrix(NA_real_, n_steps + 1, 2); xy[1, ] <- centre
+  a_prev <- runif(1, -pi, pi)
+  for (i in seq_len(n_steps)) {
+    sl <- sample(sl_pool, n_prop, TRUE)
+    aa <- a_prev + sample(ta_pool, n_prop, TRUE)
+    ce <- cbind(xy[i, 1] + sl * cos(aa), xy[i, 2] + sl * sin(aa))
+    wv <- terra::extract(wet5, ce)[[1]]; dv <- terra::extract(dry5, ce)[[1]]
+    dc <- sqrt((ce[, 1] - centre[1])^2 + (ce[, 2] - centre[2])^2) / 1000
+    eta <- b_wet * wv + b_dry * dv - k_pull * dc
+    eta[!is.finite(eta)] <- -Inf
+    if (!any(is.finite(eta))) { xy[i + 1, ] <- xy[i, ]; next }
+    pr <- exp(eta - max(eta[is.finite(eta)])); pr[!is.finite(pr)] <- 0
+    j <- sample(n_prop, 1, prob = pr)
+    xy[i + 1, ] <- ce[j, ]; a_prev <- aa[j]
+  }
+  xy
+}
+
+cats    <- c("100", "130", "131", "137", "143", "147")
+n_locs  <- c(127, 85, 118, 131, 129, 123)
+centres <- cbind(c(600, 660, 640, 700, 620, 680) * 1000,
+                 c(200, 250, 300, 230, 270, 190) * 1000)
+tracks <- do.call(rbind, lapply(seq_along(cats), function(k) {
+  xy <- sim_cat(n_locs[k] - 1, centres[k, ])
+  data.frame(CatID = cats[k], step = seq_len(nrow(xy)),
+             x = xy[, 1], y = xy[, 2])
+}))
+
+## helpers used in the exercise
+mcp_poly <- function(xy, percent = 95) {
+  ctr <- colMeans(xy)
+  d <- sqrt((xy[, 1] - ctr[1])^2 + (xy[, 2] - ctr[2])^2)
+  keep <- xy[d <= quantile(d, percent / 100), , drop = FALSE]
+  h <- chull(keep); keep[c(h, h[1]), , drop = FALSE]
+}
+in_poly <- function(pts, poly) {          # even-odd ray casting, base R
+  inside <- logical(nrow(pts))
+  for (i in seq_len(nrow(poly) - 1L)) {
+    x1 <- poly[i, 1]; y1 <- poly[i, 2]; x2 <- poly[i + 1, 1]; y2 <- poly[i + 1, 2]
+    hit <- ((y1 > pts[, 2]) != (y2 > pts[, 2])) &
+           (pts[, 1] < (x2 - x1) * (pts[, 2] - y1) / (y2 - y1) + x1)
+    hit[is.na(hit)] <- FALSE
+    inside <- xor(inside, hit)
+  }
+  inside
+}
+```
+
+```{webr}
+#| fig-width: 10.5
+#| fig-height: 4.6
+#| fig-alt: "Two panels. Left: a fourteen-class land cover map of a two hundred kilometre square with six panther trajectories drawn on it. Right: the proportion of wet forest within five kilometres, with the same trajectories."
+op <- par(mfrow = c(1, 2), mar = c(2, 2, 3, 3.4))
+plot(land, main = "land cover (14 classes)", col = hcl.colors(14, "Dark 3"), legend = FALSE)
+for (k in seq_along(cats)) {
+  ss <- tracks[tracks$CatID == cats[k], ]; lines(ss$x, ss$y, lwd = 2.2, col = k)
+}
+plot(wet5, main = "proportion wet forest within 5 km")
+for (k in seq_along(cats)) {
+  ss <- tracks[tracks$CatID == cats[k], ]; lines(ss$x, ss$y, lwd = 2.2, col = 1)
+}
+```
+
+::: termbox
+**Six Florida panthers, 713 locations. And we know the truth:** these
+tracks were generated with **β_wetforest = 0.72** and **β_dryforest =
+2.18**.
+:::
+
+::: notes
+Left: a fourteen-class land cover map of a two hundred kilometre square
+with six panther trajectories drawn on it. Right: the proportion of wet
+forest within five kilometres, with the same trajectories."
+
+THE POINT OF SIMULATED DATA HERE is that you get a right answer to check
+against. In every real resource selection study in the literature,
+nobody knows these two numbers. Today you do.
+
+The generating model is a step-selection process: at each step, 20
+candidate steps are proposed from a gamma step-length distribution and a
+wrapped-normal turning-angle distribution, and one is chosen with
+probability proportional to exp(0.72 x wetforest + 2.18 x dryforest -
+0.06 x distance from range centre).
+
+TWO THINGS EMERGE rather than being imposed, and both matter later. Home
+ranges emerge from habitat selection plus weak centre attraction —
+nobody drew a boundary. And temporal autocorrelation emerges because
+each location depends on the last.
+
+BEFORE CLASS: render this deck once. The answer-key slide fits all three
+models and prints real numbers from your machine. Read them and write
+them on your own notes — do not rely on numbers I could have guessed.
+:::
+
+## Activity
+
+Format: Individual\
+Materials : 2 colors sticky notes and design table below\
+**Your task**: Pick one of each color sticky notes and write down your
+expected result. One question per sticky note.
+
+- which design recovers the slope coefficients 0.72 and 2.18?
+- how will the other two designs affect the results?
+
+|                | Available is...                         |
+|----------------|-----------------------------------------|
+| **Design II**  | anywhere in the 200 × 200 km study area |
+| **Design III** | anywhere inside that cat's own 95% MCP  |
+| **Design IV**  | anywhere it could have stepped to next  |
+
+::: notes
+We are going to fit the **same model** to the same 713 used locations,
+three times. Only the definition of **available** will change.
+
+Make them commit in writing. A prediction that turns out wrong is
+remembered; a result with no prediction attached is not.
+
+Most students predict that Design II is "the most general" and therefore
+best. That intuition is worth having on the table before it breaks.
+
+The structural hint, if nobody is getting anywhere: ask what the
+SIMULATION did at each step. It compared where the cat went against
+where it could have gone next. One of these three designs does the same
+thing.
+:::
+
+## Design II: available is the whole study area {#hk-d2}
+
+```{r}
+#| echo: true
+
+set.seed(811)
+e   <- ext(land)
+av2 <- data.frame(x = runif(6000, xmin(e), xmax(e)),
+                  y = runif(6000, ymin(e), ymax(e)))
+
+d2 <- rbind(
+  data.frame(used = 1, terra::extract(hab, tracks[, c("x", "y")])[, -1]),
+  data.frame(used = 0, terra::extract(hab, av2)[, -1]))
+
+m2 <- glm(used ~ wetforest + dryforest, data = na.omit(d2), family = binomial)
+round(coef(m2)[-1], 3)
+```
+
+::: notes
+This is the classic use-availability RSF: used points against random
+points, fitted by logistic regression. It is by far the most common
+design in the wildlife literature.
+
+WHY THE INTERCEPT IS DROPPED FROM THE PRINTOUT. It is not estimable in
+any meaningful sense — its value depends entirely on how many available
+points you chose to draw. Draw 60,000 instead of 6,000 and the intercept
+moves; the slopes do not. That is exactly the Candy Bowl result, now in
+a regression: you have an RSF, which is relative, not an RSPF, which is
+a probability.
+
+Ask the room what would happen to the coefficients if we used 60,000
+available points. Answer: essentially nothing, beyond tighter standard
+errors. Worth running live if someone doubts it — change one number and
+re-run.
+:::
+
+## Design III: available is the animal's home range {#hk-d3}
+
+```{r}
+#| echo: true
+set.seed(812)
+av3 <- do.call(rbind, lapply(cats, function(cid) {
+  s  <- as.matrix(tracks[tracks$CatID == cid, c("x", "y")])
+  pg <- mcp_poly(s, 95); bb <- apply(pg, 2, range)
+  got <- matrix(nrow = 0, ncol = 2)
+  while (nrow(got) < 1000) {                     # rejection sampling
+    cd  <- cbind(runif(5000, bb[1, 1], bb[2, 1]),
+                 runif(5000, bb[1, 2], bb[2, 2]))
+    got <- rbind(got, cd[in_poly(cd, pg), , drop = FALSE])
+  }
+  data.frame(x = got[1:1000, 1], y = got[1:1000, 2])
+}))
+
+d3 <- rbind(
+  data.frame(used = 1, terra::extract(hab, tracks[, c("x", "y")])[, -1]),
+  data.frame(used = 0, terra::extract(hab, av3)[, -1]))
+
+m3 <- glm(used ~ wetforest + dryforest, data = na.omit(d3), family = binomial)
+round(coef(m3)[-1], 3)
+```
+
+::: notes
+Same used points. Same model. The only change is that available points
+now come from inside each cat's own 95% MCP instead of the whole region.
+
+THE MCP IS A CHOICE, AND IT IS DOING WORK. Swap it for a 95% kernel and
+the available set changes, so the coefficients change. Chapter 8's
+estimator comparison is not an academic exercise — the estimator you
+pick to define the home range becomes an assumption inside your
+selection model.
+
+in_poly() is the even-odd ray-casting rule in nine lines of base R:
+count how many polygon edges a ray from the point crosses; odd means
+inside. Worth showing once so point-in-polygon stops being a black box.
+:::
+
+## Design IV: available is the next step {#hk-d4}
+
+```{r}
+#| echo: true
+make_ssf <- function(cid, n_ctrl = 10) {
+  xy <- as.matrix(tracks[tracks$CatID == cid, c("x", "y")]); n <- nrow(xy)
+  dx <- diff(xy[, 1]); dy <- diff(xy[, 2])
+  sl <- sqrt(dx^2 + dy^2)                       # observed step lengths
+  ab <- atan2(dy, dx)                           # absolute bearings
+  ta <- ((diff(ab) + pi) %% (2 * pi)) - pi      # observed turning angles
+  idx <- 2:(n - 1); k <- length(idx)
+  st  <- paste0(cid, "_", idx)
+  slc <- sample(sl, k * n_ctrl, TRUE)           # draw FROM THE OBSERVED
+  tac <- sample(ta, k * n_ctrl, TRUE)           #   distributions, not a disc
+  aa  <- rep(ab[idx - 1], each = n_ctrl) + tac
+  rbind(
+    data.frame(stratum = st, used = 1, x = xy[idx + 1, 1], y = xy[idx + 1, 2]),
+    data.frame(stratum = rep(st, each = n_ctrl), used = 0,
+               x = rep(xy[idx, 1], each = n_ctrl) + slc * cos(aa),
+               y = rep(xy[idx, 2], each = n_ctrl) + slc * sin(aa)))
+}
+
+set.seed(813)
+d4 <- do.call(rbind, lapply(cats, make_ssf))
+d4 <- na.omit(cbind(d4, terra::extract(hab, d4[, c("x", "y")])[, -1]))
+
+m4 <- clogit(used ~ wetforest + dryforest + strata(stratum), data = d4)
+round(coef(m4), 3)
+```
+
+::: notes
+Each observed step is matched to 10 steps the cat could have taken
+instead, drawn from ITS OWN step-length and turning-angle distributions.
+Then conditional logistic regression compares within each matched set.
+
+THIS IS GAUGE TRAP (g) DONE CORRECTLY. Available steps come from the
+observed step distribution, not uniformly from a buffer. An animal that
+mostly takes 5 km steps is not choosing uniformly inside a 15 km circle,
+and pretending otherwise biases every coefficient.
+
+NO INTERCEPT AT ALL in a conditional logit — it cancels within each
+stratum. That is not a limitation here; the intercept was never
+interpretable anyway.
+
+ONE HONEST CAVEAT worth stating if you have strong students: we draw
+available steps from the OBSERVED step lengths, but the observed lengths
+are themselves a selected sample of what was proposed. Forester et al.
+(2009) show this induces a small bias and recommend including step
+length as a covariate to absorb it. Our n_ctrl = 10 and a well-mixed
+landscape keep it minor, but it is real.
+:::
+
+## Design comparison {#hk-key}
+
+```{r}
+#| fig-width: 10
+#| fig-height: 4.3
+#| fig-alt: "Two panels, one per covariate, each showing point estimates with confidence intervals for Designs II, III and IV, against a dashed line marking the true coefficient used to generate the data."
+tab <- rbind(`Design II  (study area)` = coef(m2)[-1],
+             `Design III (home range)` = coef(m3)[-1],
+             `Design IV  (next step)`  = coef(m4),
+             `TRUTH`                   = c(b_wet, b_dry))
+print(round(tab, 2))
+
+ci <- function(m, drop_int = TRUE) {
+  cf <- coef(m); se <- sqrt(diag(vcov(m)))
+  if (drop_int) { cf <- cf[-1]; se <- se[-1] }
+  cbind(est = cf, lo = cf - 1.96 * se, hi = cf + 1.96 * se)
+}
+C <- list(II = ci(m2), III = ci(m3), IV = ci(m4, FALSE))
+
+op <- par(mfrow = c(1, 2), mar = c(4, 4.4, 3, 1.4))
+for (v in c("wetforest", "dryforest")) {
+  est <- sapply(C, function(z) z[v, "est"])
+  lo  <- sapply(C, function(z) z[v, "lo"])
+  hi  <- sapply(C, function(z) z[v, "hi"])
+  tr  <- if (v == "wetforest") b_wet else b_dry
+  rg  <- range(c(lo, hi, tr, 0)); pd <- diff(rg) * 0.14
+  plot(1:3, est, xlim = c(0.6, 3.5), ylim = c(rg[1] - pd, rg[2] + pd),
+       pch = 19, cex = 1.7, col = MAROON, xaxt = "n", las = 1,
+       xlab = "availability design", ylab = "coefficient",
+       main = v, col.main = MAROON)
+  arrows(1:3, lo, 1:3, hi, angle = 90, code = 3, length = 0.07,
+         lwd = 2.5, col = MAROON)
+  abline(h = 0, col = "grey70")
+  abline(h = tr, lwd = 3, lty = 2, col = GREEN)
+  axis(1, 1:3, c("II", "III", "IV"))
+  text(3.42, tr, "truth", col = GREEN, cex = 0.72, pos = 3)
+}
+par(op)
+```
+
+::: notes
+YOUR NUMBERS WILL BE YOUR OWN — this chunk fits the models when you
+render, so read what your machine prints rather than trusting any number
+quoted in advance.
+
+WHAT TO EXPECT, and what each outcome means.
+
+Design IV should sit closest to the dashed truth lines, because its
+availability matches the generating process.
+
+Designs II and III should both differ from truth and from each other.
+The direction is not guaranteed and depends on where the home-range
+centres happened to land relative to habitat, which in this simulation
+is essentially arbitrary. That arbitrariness IS the finding:
+second-order placement was random here, so Design II is mixing a real
+third-order signal with a null second-order one.
+
+IF DESIGN II AND DESIGN III COME OUT SIMILAR, do not hide it — say that
+the home-range centres happened to fall in fairly average habitat this
+time, so the two availability domains are less different than they
+usually are. Then change the seed on the centres and re-run to show it
+is not guaranteed.
+
+CHECK THE CONFIDENCE INTERVALS, not just the points. wet5 and dry5 are
+carved from a single smoothed gradient and are correlated — run
+round(layerCor(hab, "pearson", na.rm = TRUE)\$correlation, 3) live if
+you want to show it. Correlated covariates give wide, unstable
+individual coefficients even when the model as a whole predicts well.
+That is Chapter 6 arriving inside Chapter 8.
+
+Which one recoverd the truth? THE ANSWER TO "why that one": Design IV is
+the only design whose definition of available matches the process that
+generated the data. The simulation chose among candidate NEXT STEPS;
+Design IV compares against candidate next steps. Designs II and III
+compare against places the cat could not possibly have reached in one
+move.
+
+THEN THE UNCOMFORTABLE FOLLOW-UP, which is the real lesson: with real
+panthers you do not know the generating process. You cannot check which
+design matches it. You pick one, and the picking determines your answer.
+:::
+
+## Activity Debrief {#hk-debrief}
+
+- The **used** points never changed. Only the **available** did.
+- Design IV won because its availability **matched the process that
+  generated the data** — and in the field, you never get to check that.\
+- **Different orders.** The two availability domains ask different
+  questions.
+
+::: notes
+In your own thesis you will have neither, and the availability domain
+will still be the single most consequential decision you make.
+
+FIRST, coefficients of an exponential RSF fitted through a logistic
+regression package are NOT log-odds ratios. They are relative risk. The
+interpretation follows the model being fitted, not the software used to
+fit it.
+
+SECOND, Manly's used-versus-unused design with binary regression
+estimates probability of OCCUPANCY, not probability of selection. The
+RSF from a use-availability design and the RSPF from a used-unused
+design are not proportional to each other. They are different quantities
+that unfortunately inherited similar names.
+:::
+
+# 1.3 Example home ranges
+## Simulate data
+
+```{r, echo=FALSE, include=FALSE}
+###############################################################################
+## 01_rsf_ssf_lab.R
+##
+## Habitat selection from movement data:
+##   RSF, SSF, conditional RSF, conditional SSF (iSSA)
+##   plus home-range / utilization-distribution estimation
+##
+## Dependencies: base R (>= 4.1) and sf.
+##   `survival` is OPTIONAL -- used only to cross-check the hand-written
+##   conditional logistic likelihood. Everything runs without it.
+##
+## Everything below is simulated, so the TRUE coefficients are known and every
+## estimator can be scored against them. That is the whole point of the lab.
+##
+## Runtime note: the movement simulation is the slow part (a loop over steps).
+## On a laptop expect ~30-90 s for the default settings. To iterate quickly in
+## class, set N_STEPS <- 400 and N_ANIMALS <- 3.
+###############################################################################
+
+library(sf)
+set.seed(2026)
+
+## Colourblind-safe palette (Okabe & Ito 2008). Used everywhere so that figures
+## never rely on hue alone -- point symbol / line type always carries the same
+## information. UM accessibility policy (WCAG 2.1 AA, SC 1.4.1).
+OI <- c(black = "#000000", orange = "#E69F00", skyblue = "#56B4E9",
+        green  = "#009E73", yellow = "#F0E442", blue    = "#0072B2",
+        verm   = "#D55E00", purple = "#CC79A7")
+
+
+###############################################################################
+## SECTION 0 -- Minimal raster + circular-statistics helpers in base R
+###############################################################################
+
+## A "raster" here is just a list: a matrix z[row = y, col = x] plus an origin
+## and a cell size. No raster/terra dependency, so students can see exactly
+## what a raster IS: a matrix with a coordinate contract.
+new_rast <- function(z, x0, y0, res) {
+  list(z = z, x0 = x0, y0 = y0, res = res,
+       ny = nrow(z), nx = ncol(z),
+       xs = x0 + (seq_len(ncol(z)) - 0.5) * res,   # cell-centre x
+       ys = y0 + (seq_len(nrow(z)) - 0.5) * res)   # cell-centre y
+}
+
+## Nearest-cell extraction. Returns NA outside the grid -- we will USE that NA
+## later to represent "not available" rather than silently clamping to the edge.
+rast_get <- function(r, x, y) {
+  cc  <- floor((x - r$x0) / r$res) + 1L
+  rr  <- floor((y - r$y0) / r$res) + 1L
+  out <- rep(NA_real_, length(x))
+  ok  <- !is.na(cc) & !is.na(rr) & cc >= 1L & cc <= r$nx & rr >= 1L & rr <= r$ny
+  out[ok] <- r$z[cbind(rr[ok], cc[ok])]
+  out
+}
+
+## image() expects z[i = x, j = y], our matrices are z[row = y, col = x].
+rast_image <- function(r, ...) image(r$xs, r$ys, t(r$z), asp = 1,
+                                     xlab = "Easting (m)", ylab = "Northing (m)", ...)
+
+## Spatially autocorrelated Gaussian field: white noise put through repeated
+## 3x3 box blurs. `passes` controls the correlation length
+## (sd of the smoothing kernel ~ sqrt(2 * passes / 3) cells).
+smooth_field <- function(nr, nc, passes = 25) {
+  z <- matrix(rnorm(nr * nc), nr, nc)
+  for (p in seq_len(passes)) {
+    zp <- rbind(z[1, , drop = FALSE], z, z[nr, , drop = FALSE])       # pad rows
+    zp <- cbind(zp[, 1, drop = FALSE], zp, zp[, nc, drop = FALSE])    # pad cols
+    z <- (zp[1:nr,     1:nc    ] + zp[2:(nr+1), 1:nc    ] + zp[3:(nr+2), 1:nc    ] +
+          zp[1:nr,     2:(nc+1)] + zp[2:(nr+1), 2:(nc+1)] + zp[3:(nr+2), 2:(nc+1)] +
+          zp[1:nr,     3:(nc+2)] + zp[2:(nr+1), 3:(nc+2)] + zp[3:(nr+2), 3:(nc+2)]) / 9
+  }
+  (z - mean(z)) / sd(as.vector(z))
+}
+
+## Wrap any angle to (-pi, pi].
+wrap <- function(a) atan2(sin(a), cos(a))
+
+## von Mises sampler, Best & Fisher (1979) rejection algorithm, vectorised.
+## kappa = 0 is the uniform circular distribution (an uncorrelated random walk).
+rvonmises <- function(n, mu = 0, kappa = 1) {
+  if (n == 0) return(numeric(0))
+  if (kappa < 1e-8) return(runif(n, -pi, pi))
+  a <- 1 + sqrt(1 + 4 * kappa^2)
+  b <- (a - sqrt(2 * a)) / (2 * kappa)
+  r <- (1 + b^2) / (2 * b)
+  out <- numeric(0)
+  while (length(out) < n) {
+    m  <- 2L * (n - length(out)) + 20L
+    u1 <- runif(m); u2 <- runif(m); u3 <- runif(m)
+    z  <- cos(pi * u1)
+    f  <- (1 + r * z) / (r + z)
+    c0 <- kappa * (r - f)
+    cond1 <- (c0 * (2 - c0) - u2) > 0
+    cond2 <- suppressWarnings(log(c0 / u2) + 1 - c0) >= 0
+    keep  <- which(cond1 | (!is.na(cond2) & cond2))
+    if (length(keep))
+      out <- c(out, sign(u3[keep] - 0.5) * acos(pmax(-1, pmin(1, f[keep]))))
+  }
+  wrap(mu + out[seq_len(n)])
+}
+
+## Method-of-moments gamma fit (shape, scale). MLE via optim is an exercise.
+fit_gamma_mom <- function(x) {
+  x <- x[is.finite(x) & x > 0]
+  m <- mean(x); v <- var(x)
+  c(shape = m^2 / v, scale = v / m)
+}
+
+## kappa from the mean resultant length (Mardia & Jupp 2000, eq. 5.3.6-8).
+fit_kappa <- function(ta) {
+  ta <- ta[is.finite(ta)]
+  Rbar <- sqrt(mean(cos(ta))^2 + mean(sin(ta))^2)
+  if (Rbar < 0.53)      2 * Rbar + Rbar^3 + 5 * Rbar^5 / 6
+  else if (Rbar < 0.85) -0.4 + 1.39 * Rbar + 0.43 / (1 - Rbar)
+  else                  1 / (Rbar^3 - 4 * Rbar^2 + 3 * Rbar)
+}
+
+
+###############################################################################
+## SECTION 1 -- The landscape
+##
+## Three layers. `forest` and `dist_water` are the covariates the animal
+## responds to. `elev` is NEVER in any fitted model: it exists only to induce
+## broad-scale structure in forest cover, which is what makes the
+## second-order / third-order distinction in Section 6 visible.
+###############################################################################
+
+NX <- 200L; NY <- 200L; RES <- 25          # 200 x 200 cells of 25 m = 5 x 5 km
+X0 <- 720000; Y0 <- 5190000                # arbitrary UTM 11N origin, illustrative
+EPSG <- 32611                              # WGS84 / UTM zone 11N -- metres
+
+## Broad SW -> NE elevation gradient plus long-wavelength noise.
+grad  <- outer(seq_len(NY), seq_len(NX), function(i, j) 0.6 * (j / NX) + 0.4 * (i / NY))
+elev  <- new_rast(1150 + 500 * grad + 80 * smooth_field(NY, NX, passes = 250),
+                  X0, Y0, RES)
+elev_s <- (elev$z - mean(elev$z)) / sd(as.vector(elev$z))
+
+## Canopy cover in [0, 1]: patchy at ~100 m, but forest thins with elevation.
+## cor(forest, elev) is strongly negative -- remember this.
+forest <- new_rast(plogis(1.5 * smooth_field(NY, NX, passes = 30) - 1.1 * elev_s),
+                   X0, Y0, RES)
+
+## A meandering river as a real sf LINESTRING, then distance-to-water by
+## st_distance() from every cell centre. This is the one job sf does far better
+## than hand-rolled code.
+t_riv <- seq(0, 1, length.out = 150)
+river <- st_sfc(st_linestring(cbind(
+  X0 + (0.30 + 0.16 * sin(2 * pi * 1.4 * t_riv)) * NX * RES,
+  Y0 + t_riv * NY * RES)), crs = EPSG)
+
+cell_pts <- st_as_sf(expand.grid(x = forest$xs, y = forest$ys),
+                     coords = c("x", "y"), crs = EPSG)
+d_riv <- as.numeric(st_distance(cell_pts, river))    # metres, length NX*NY
+
+## expand.grid() varies x fastest -> matrix(., NX, NY) is [x, y]; transpose to
+## get our [row = y, col = x] convention. Units: km, so betas read "per km".
+dist_water <- new_rast(t(matrix(d_riv / 1000, NX, NY)), X0, Y0, RES)
+
+cat(sprintf("cor(forest, elevation)   = %+.2f\n",
+            cor(as.vector(forest$z), as.vector(elev$z))))
+cat(sprintf("cor(forest, dist_water)  = %+.2f\n",
+            cor(as.vector(forest$z), as.vector(dist_water$z))))
+
+
+###############################################################################
+## SECTION 2 -- The truth
+##
+## The animal is simulated from a step-selection process, so these betas are
+## literally the parameters of the SSF. Any RSF we fit is estimating a
+## DIFFERENT (scale-dependent) quantity -- not a biased version of the same one.
+###############################################################################
+
+## Tentative (proposal) movement kernel -- the "available" movement.
+K0     <- 2.0        # gamma shape
+THETA0 <- 70         # gamma scale, metres  => mean step 140 m/h
+KAPPA0 <- 0.6        # von Mises concentration
+
+## Habitat + movement selection coefficients.
+TRUTH <- c(forest     =  2.00,   # per unit canopy cover (0 -> 1)
+           dist_water = -1.20,   # per km from water
+           dist_den   = -2.50,   # per km from den: site fidelity / home-range anchor
+           sl         = -0.002,  # per metre  -> shortens steps vs the proposal
+           log_sl     =  0.00,   # shape unchanged
+           cos_ta     =  0.50)   # more directional than the proposal
+
+## iSSA back-transform: the SELECTION-FREE realised kernel implied by TRUTH.
+##   shape* = shape + b_log_sl ; rate* = 1/scale - b_sl ; kappa* = kappa + b_cos_ta
+TRUE_SHAPE <- K0 + TRUTH["log_sl"]
+TRUE_RATE  <- 1 / THETA0 - TRUTH["sl"]
+TRUE_KAPPA <- KAPPA0 + TRUTH["cos_ta"]
+cat(sprintf("\nrealised step length: shape*=%.2f  scale*=%.1f m  mean*=%.0f m\n",
+            TRUE_SHAPE, 1 / TRUE_RATE, TRUE_SHAPE / TRUE_RATE))
+
+N_ANIMALS <- 8L
+N_STEPS   <- 1800L        # hourly fixes -> 75 days per animal
+
+## Dens sit in well-forested interior cells. This is DELIBERATE: it makes
+## home-range placement (second-order selection) correlate with forest cover.
+thr  <- 0.75
+repeat {
+  cand <- which(forest$z > thr, arr.ind = TRUE)        # cols are (row, col) = (y, x)
+  cand <- cand[cand[, 1] > 60 & cand[, 1] < 140 &
+               cand[, 2] > 40 & cand[, 2] < 120, , drop = FALSE]
+  if (nrow(cand) >= N_ANIMALS) break
+  thr <- thr - 0.05
+}
+sel   <- cand[sample(nrow(cand), N_ANIMALS), , drop = FALSE]
+dens  <- cbind(x = X0 + (sel[, 2] - 0.5) * RES,
+               y = Y0 + (sel[, 1] - 0.5) * RES)
+
+## Among-individual variation in forest selection: real populations are not
+## one animal measured many times.
+b_forest_i <- rnorm(N_ANIMALS, TRUTH["forest"], 0.45)
+
+
+###############################################################################
+## SECTION 3 -- Simulate the movement
+##
+## At each step: propose n_prop candidate steps from the tentative kernel,
+## weight each by exp(beta'x(endpoint)), and choose one with probability
+## proportional to that weight. This IS the SSF, run forwards.
+###############################################################################
+
+sim_track <- function(n_steps, start, den, b_forest, n_prop = 25L) {
+  bw <- unname(TRUTH["dist_water"])
+  bd <- unname(TRUTH["dist_den"])
+  bs <- unname(TRUTH["sl"])
+  bl <- unname(TRUTH["log_sl"])
+  bc <- unname(TRUTH["cos_ta"])
+  b_forest <- unname(b_forest)
+  x <- y <- bear <- numeric(n_steps + 1L)
+  x[1] <- start[1]; y[1] <- start[2]
+  bear[1] <- runif(1, -pi, pi)
+
+  for (i in seq_len(n_steps)) {
+    w <- NULL
+    for (try in 1:25) {                      # redraw if every candidate is off-grid
+      sl <- rgamma(n_prop, shape = K0, scale = THETA0)
+      ta <- rvonmises(n_prop, 0, KAPPA0)
+      bb <- bear[i] + ta
+      cx <- x[i] + sl * cos(bb); cy <- y[i] + sl * sin(bb)
+
+      lp <- b_forest * rast_get(forest,     cx, cy) +
+            bw       * rast_get(dist_water, cx, cy) +
+            bd       * sqrt((cx - den[1])^2 + (cy - den[2])^2) / 1000 +
+            bs       * sl +
+            bl       * log(sl) +
+            bc       * cos(ta)
+      lp[!is.finite(lp)] <- -Inf               # off-grid = unavailable, weight 0
+      mx <- max(lp)
+      if (is.finite(mx)) { w <- exp(lp - mx); w[!is.finite(w)] <- 0 } else w <- NULL
+      if (!is.null(w) && sum(w) > 0) break
+    }
+    if (is.null(w) || sum(w) == 0) stop("stuck: animal has no available habitat")
+
+    j <- sample.int(n_prop, 1L, prob = w)
+    x[i + 1L] <- cx[j]; y[i + 1L] <- cy[j]
+    bear[i + 1L] <- atan2(cy[j] - y[i], cx[j] - x[i])
+  }
+  data.frame(x = x, y = y, bear = bear, t = seq_len(n_steps + 1L) - 1L)
+}
+
+cat("\nsimulating", N_ANIMALS, "animals x", N_STEPS, "hourly steps ...\n")
+track <- do.call(rbind, lapply(seq_len(N_ANIMALS), function(a) {
+  tr <- sim_track(N_STEPS, dens[a, ], dens[a, ], b_forest_i[a])
+  cbind(id = a, tr)
+}))
+cat("done:", nrow(track), "relocations\n")   # id stays INTEGER on purpose:
+                                             # factor == integer comparisons bite
+
+## Sanity plot: forest layer + one track + the river.
+rast_image(forest, col = grey.colors(32, start = 1, end = 0.25),
+           main = "Canopy cover, river, and one simulated track")
+plot(river, add = TRUE, col = OI["blue"], lwd = 3)
+tr1 <- track[track$id == 1, ]
+lines(tr1$x, tr1$y, col = OI["verm"], lwd = 1)
+points(dens[1, 1], dens[1, 2], pch = 24, bg = OI["yellow"], cex = 1.6)
+legend("topright", bty = "n",
+       legend = c("river", "animal 1 path", "den"),
+       col = c(OI["blue"], OI["verm"], "black"),
+       pch = c(NA, NA, 24), pt.bg = c(NA, NA, OI["yellow"]),
+       lty = c(1, 1, NA), lwd = c(3, 1, NA))
+
+
+###############################################################################
+## SECTION 4 -- Home range and the utilization distribution
+##
+## Four estimators, four different definitions of "the area an animal uses".
+## Compare the AREAS, but more importantly compare the SHAPES: each estimator
+## encodes an assumption about what the gaps between fixes mean.
+###############################################################################
+
+## ---- 4a. Minimum convex polygon -------------------------------------------
+## The x% MCP drops the x% of fixes furthest from the arithmetic centroid, then
+## takes the convex hull. Both of those choices are conventions, not estimators.
+mcp <- function(xy, pct = 95) {
+  ctr  <- colMeans(xy)
+  d    <- sqrt((xy[, 1] - ctr[1])^2 + (xy[, 2] - ctr[2])^2)
+  keep <- xy[d <= quantile(d, pct / 100), , drop = FALSE]
+  ch   <- rev(chull(keep))                        # rev() -> CCW exterior ring
+  st_sfc(st_polygon(list(rbind(keep[ch, ], keep[ch[1], ]))), crs = EPSG)
+}
+
+## ---- 4b. Kernel density estimate ------------------------------------------
+## Bin the fixes to the grid, then smooth. A Gaussian kernel is SEPARABLE, so
+## a 2-D convolution is two matrix multiplications -- no loops, no FFT.
+##   f(x) = (1 / n h^2) * sum_i K((x - x_i) / h)
+kde_grid <- function(x, y, r, h) {
+  cc <- floor((x - r$x0) / r$res) + 1L
+  rr <- floor((y - r$y0) / r$res) + 1L
+  ok <- cc >= 1L & cc <= r$nx & rr >= 1L & rr <= r$ny
+  cnt <- matrix(tabulate((cc[ok] - 1L) * r$ny + rr[ok], nbins = r$nx * r$ny),
+                r$ny, r$nx)
+  Ky <- dnorm(outer(r$ys, r$ys, "-"), sd = h)     # ny x ny
+  Kx <- dnorm(outer(r$xs, r$xs, "-"), sd = h)     # nx x nx
+  z  <- Ky %*% cnt %*% Kx                         # smooth rows, then columns
+  new_rast(z / sum(z), r$x0, r$y0, r$res)         # normalised: cells sum to 1
+}
+
+## Worton (1989) reference bandwidth for a bivariate normal kernel.
+h_ref <- function(x, y) sqrt((var(x) + var(y)) / 2) * length(x)^(-1 / 6)
+
+## The x% isopleth of a UD is a VOLUME contour, not a density contour: rank
+## cells by density, walk down until they hold x% of the probability mass.
+ud_threshold <- function(ud, level = 0.95) {
+  z <- sort(as.vector(ud$z), decreasing = TRUE)
+  z[which(cumsum(z) >= level)[1]]
+}
+ud_area_km2 <- function(ud, level = 0.95)
+  sum(ud$z >= ud_threshold(ud, level)) * ud$res^2 / 1e6
+
+## Isopleth as sf, for plotting and for st_* operations. Caveat: interior rings
+## are returned as separate polygons, so a doughnut-shaped UD is slightly
+## over-measured here -- use ud_area_km2() for area, this for geometry.
+ud_isopleth_sf <- function(ud, level = 0.95) {
+  cl <- contourLines(ud$xs, ud$ys, t(ud$z), levels = ud_threshold(ud, level))
+  if (!length(cl)) return(st_sfc(crs = EPSG))
+  g <- st_sfc(lapply(cl, function(p) {
+    xy <- cbind(p$x, p$y)
+    if (any(xy[1, ] != xy[nrow(xy), ])) xy <- rbind(xy, xy[1, ])
+    st_polygon(list(xy))
+  }), crs = EPSG)
+  st_union(st_make_valid(g))
+}
+
+## ---- 4c. k-LoCoH ----------------------------------------------------------
+## Union of convex hulls of each fix and its k-1 nearest neighbours, added
+## smallest-first until x% of fixes are enclosed. Unlike KDE it can produce
+## hard edges and holes -- which is exactly what a river or a cliff is.
+## O(n^2) in memory, so thin the track first.
+locoh_k <- function(xy, k = 20L, iso = 0.95) {
+  n  <- nrow(xy)
+  dm <- as.matrix(dist(xy))
+  nb <- lapply(seq_len(n), function(i) order(dm[i, ])[seq_len(k)])
+  hulls <- st_sfc(lapply(nb, function(ix)
+    st_convex_hull(st_multipoint(xy[ix, , drop = FALSE]))), crs = EPSG)
+  ## Collinear neighbourhoods give a LINESTRING, not a POLYGON -- drop them
+  ## rather than let st_union() return a GEOMETRYCOLLECTION.
+  poly <- which(st_geometry_type(hulls) == "POLYGON")
+  ord  <- poly[order(as.numeric(st_area(hulls[poly])))]
+  inside <- integer(0); take <- integer(0)
+  for (i in ord) {
+    take   <- c(take, i)
+    inside <- union(inside, nb[[i]])
+    if (length(inside) >= iso * n) break
+  }
+  st_union(st_make_valid(hulls[take]))
+}
+
+## ---- 4d. Brownian bridge movement model -----------------------------------
+## The gap between two fixes is filled by a conditioned random walk. At time
+## fraction alpha along a step of duration T:
+##   mean     mu(alpha)    = a + alpha (b - a)
+##   variance sigma^2(alpha) = T alpha (1 - alpha) sigma_m^2
+##                             + ((1-alpha)^2 + alpha^2) delta^2
+## With regular fix intervals every step shares the same sigma^2(alpha), so we
+## can reuse the separable-convolution trick once per alpha instead of looping
+## over 14,000 bridges.
+bb_sigma2m <- function(x, y, T_step = 1, delta2 = 15^2) {
+  n <- length(x); if (n < 3) return(NA_real_)
+  i <- seq(1, n - 2)
+  dx <- x[i + 1] - (x[i] + x[i + 2]) / 2
+  dy <- y[i + 1] - (y[i] + y[i + 2]) / 2
+  (mean(c(dx, dy)^2) - 0.5 * delta2) / (0.5 * T_step)   # see notes for derivation
+}
+
+bbmm_grid <- function(x, y, r, sigma2m, T_step = 1, delta2 = 15^2, n_alpha = 12L) {
+  if (!is.finite(sigma2m) || sigma2m <= 0)
+    stop("sigma_m^2 is not estimable: too few fixes, or delta2 set too large")
+  n <- length(x)
+  ax <- x[-n]; ay <- y[-n]; bx <- x[-1]; by <- y[-1]
+  z  <- matrix(0, r$ny, r$nx)
+  for (al in (seq_len(n_alpha) - 0.5) / n_alpha) {
+    s2 <- T_step * al * (1 - al) * sigma2m + ((1 - al)^2 + al^2) * delta2
+    z  <- z + kde_grid(ax + al * (bx - ax), ay + al * (by - ay), r, sqrt(max(s2, r$res^2)))$z
+  }
+  new_rast(z / sum(z), r$x0, r$y0, r$res)
+}
+
+## ---- 4e. Compare estimators for one animal --------------------------------
+a1   <- track[track$id == 1, ]
+xy1  <- cbind(a1$x, a1$y)
+xy1d <- xy1[seq(1, nrow(xy1), by = 24), ]         # daily thinning (bandwidth demo)
+xy1l <- xy1[seq(1, nrow(xy1), by =  6), ]         # 6-hourly (LoCoH is O(n^2))
+
+h1     <- h_ref(xy1[, 1], xy1[, 2])
+ud_kde <- kde_grid(xy1[, 1], xy1[, 2], forest, h1)
+s2m    <- bb_sigma2m(xy1[, 1], xy1[, 2])
+ud_bb  <- bbmm_grid(xy1[, 1], xy1[, 2], forest, s2m)
+
+hr <- data.frame(
+  estimator = c("MCP 100%", "MCP 95%", "KDE 95% (h_ref, hourly)",
+                "KDE 95% (0.8 h_ref)", "KDE 50% core", "BBMM 95%", "LoCoH 95% (k=20)"),
+  area_km2 = c(
+    as.numeric(st_area(mcp(xy1, 100))) / 1e6,
+    as.numeric(st_area(mcp(xy1,  95))) / 1e6,
+    ud_area_km2(ud_kde, 0.95),
+    ud_area_km2(kde_grid(xy1[, 1], xy1[, 2], forest, 0.8 * h1), 0.95),
+    ud_area_km2(ud_kde, 0.50),
+    ud_area_km2(ud_bb,  0.95),
+    as.numeric(st_area(locoh_k(xy1l, 20L, 0.95))) / 1e6))
+cat("\n--- Home range, animal 1 ---\n"); print(hr, digits = 3, row.names = FALSE)
+cat(sprintf("h_ref (hourly, n=%d) = %.0f m | h_ref (daily, n=%d) = %.0f m\n",
+            nrow(xy1), h1, nrow(xy1d), h_ref(xy1d[, 1], xy1d[, 2])))
+cat(sprintf("Brownian motion variance sigma_m^2 = %.0f m^2/h\n", s2m))
+
+rast_image(ud_kde, col = grey.colors(32, start = 1, end = 0.3),
+           main = "Animal 1: KDE utilization distribution with 50% and 95% isopleths")
+## col = NA matters: plot.sfc fills polygons by default and would hide the UD.
+plot(ud_isopleth_sf(ud_kde, 0.95), add = TRUE, col = NA, border = OI["blue"],  lwd = 2.5, lty = 1)
+plot(ud_isopleth_sf(ud_kde, 0.50), add = TRUE, col = NA, border = OI["verm"],  lwd = 2.5, lty = 2)
+plot(mcp(xy1, 95),                 add = TRUE, col = NA, border = OI["green"], lwd = 2.5, lty = 3)
+legend("topright", bty = "n", lwd = 2.5, lty = c(1, 2, 3),
+       col = c(OI["blue"], OI["verm"], OI["green"]),
+       legend = c("KDE 95% isopleth", "KDE 50% core", "MCP 95%"))
+
+
+###############################################################################
+## SECTION 5 -- Build the four analysis data sets
+##
+## The four models differ in exactly two binary choices:
+##   (i)  where "available" comes from -- a home range, or a movement kernel
+##   (ii) whether availability is pooled, or matched to each use in a stratum
+## Everything else -- the covariates, the link, the software -- is the same.
+###############################################################################
+
+## ---- 5a. USED points at two sampling rates --------------------------------
+used_hourly <- track                                        # for SSFs
+used_daily  <- do.call(rbind, lapply(split(track, track$id),
+                                     function(d) d[seq(1, nrow(d), by = 24), ]))
+cat(sprintf("\nused points: %d hourly, %d daily\n",
+            nrow(used_hourly), nrow(used_daily)))
+
+## Attach covariates to any set of coordinates. Note we assign with d$... rather
+## than within(), so the new `forest` column never shadows the `forest` raster.
+add_cov <- function(d, den_xy, f_r = forest, w_r = dist_water) {
+  d$forest     <- rast_get(f_r, d$x, d$y)
+  d$dist_water <- rast_get(w_r, d$x, d$y)
+  d$dist_den   <- sqrt((d$x - den_xy[, 1])^2 + (d$y - den_xy[, 2])^2) / 1000
+  d
+}
+
+## Matched designs are all-or-nothing: if one control point in a stratum has a
+## missing covariate, drop the WHOLE stratum. Keeping it with an NA silently
+## changes the denominator of the conditional likelihood.
+drop_incomplete_strata <- function(d, vars, strata) {
+  bad <- unique(d[[strata]][!complete.cases(d[, vars, drop = FALSE])])
+  if (length(bad)) message(sprintf("  dropped %d of %d strata (off-grid controls)",
+                                   length(bad), length(unique(d[[strata]]))))
+  d[!d[[strata]] %in% bad, ]
+}
+
+## ---- 5b. Design 1: RSF availability = the animal's 95% KDE home range -----
+## Third-order selection (Johnson 1980): within-home-range use vs availability.
+N_AVAIL_PER_USED <- 50L
+
+sample_from_ud <- function(ud, level, n) {
+  idx  <- which(ud$z >= ud_threshold(ud, level))
+  pick <- sample(idx, n, replace = TRUE)
+  rr   <- ((pick - 1L) %% ud$ny) + 1L
+  cc   <- ((pick - 1L) %/% ud$ny) + 1L
+  cbind(x = ud$x0 + (cc - 0.5) * ud$res + runif(n, -ud$res / 2, ud$res / 2),
+        y = ud$y0 + (rr - 0.5) * ud$res + runif(n, -ud$res / 2, ud$res / 2))
+}
+
+rsf_hr <- do.call(rbind, lapply(seq_len(N_ANIMALS), function(a) {
+  u  <- used_daily[used_daily$id == a, ]
+  ah <- track[track$id == a, ]
+  ud <- kde_grid(ah$x, ah$y, forest, h_ref(ah$x, ah$y))
+  av <- sample_from_ud(ud, 0.95, nrow(u) * N_AVAIL_PER_USED)
+  d  <- rbind(data.frame(id = a, x = u$x, y = u$y, case = 1L),
+              data.frame(id = a, x = av[, 1], y = av[, 2], case = 0L))
+  add_cov(d, matrix(dens[a, ], nrow(d), 2, byrow = TRUE))
+}))
+## Infinitely weighted logistic regression (Fithian & Hastie 2013): huge weights
+## on the available points make glm() converge to the Poisson point-process /
+## exponential-RSF solution.
+rsf_hr$wt <- ifelse(rsf_hr$case == 1L, 1, 5000)
+
+## ---- 5c. Design 1b: the SAME model, availability = the whole study area ----
+## Second- AND third-order selection mixed together. Same code, one line changed.
+rsf_sa <- do.call(rbind, lapply(seq_len(N_ANIMALS), function(a) {
+  u  <- used_daily[used_daily$id == a, ]
+  n  <- nrow(u) * N_AVAIL_PER_USED
+  d  <- rbind(data.frame(id = a, x = u$x, y = u$y, case = 1L),
+              data.frame(id = a,
+                         x = runif(n, X0, X0 + NX * RES),
+                         y = runif(n, Y0, Y0 + NY * RES), case = 0L))
+  add_cov(d, matrix(dens[a, ], nrow(d), 2, byrow = TRUE))
+}))
+rsf_sa$wt <- ifelse(rsf_sa$case == 1L, 1, 5000)
+
+## ---- 5d. Design 3: conditional (matched case-control) RSF -----------------
+## Availability is MATCHED to each used point: K controls drawn uniformly in a
+## disc of radius R around it, one stratum per used point.
+## Uniform on a disc needs r = R*sqrt(u), NOT r = R*u.
+K_MATCH <- 20L; R_MATCH <- 500
+
+crsf <- do.call(rbind, lapply(seq_len(nrow(used_daily)), function(i) {
+  u   <- used_daily[i, ]
+  rr  <- R_MATCH * sqrt(runif(K_MATCH)); th <- runif(K_MATCH, 0, 2 * pi)
+  d   <- rbind(data.frame(id = u$id, str = i, x = u$x, y = u$y, case = 1L),
+               data.frame(id = u$id, str = i,
+                          x = u$x + rr * cos(th), y = u$y + rr * sin(th), case = 0L))
+  add_cov(d, matrix(dens[u$id, ], nrow(d), 2, byrow = TRUE))
+}))
+crsf <- drop_incomplete_strata(crsf, c("forest", "dist_water", "dist_den"), "str")
+
+## ---- 5e. Designs 2 & 4: step data ----------------------------------------
+## Random steps are drawn from a tentative kernel FITTED TO THE OBSERVED STEPS,
+## which is standard practice -- and slightly circular, because the observed
+## steps are already selection-affected. See the speaker notes.
+K_STEP <- 10L
+
+step_data <- do.call(rbind, lapply(seq_len(N_ANIMALS), function(a) {
+  tr <- track[track$id == a, ]
+  n  <- nrow(tr)
+  sl <- sqrt(diff(tr$x)^2 + diff(tr$y)^2)      # step i: position i -> i+1
+  bg <- atan2(diff(tr$y), diff(tr$x))
+  ta <- c(NA, wrap(diff(bg)))                  # needs the PREVIOUS bearing
+  gp <- fit_gamma_mom(sl); kp <- fit_kappa(ta)
+
+  do.call(rbind, lapply(2:(n - 1L), function(i) {
+    slr <- rgamma(K_STEP, shape = gp["shape"], scale = gp["scale"])
+    tar <- rvonmises(K_STEP, 0, kp)
+    bbr <- bg[i - 1L] + tar
+    d <- data.frame(
+      id   = a,
+      str  = paste0(a, "_", i),
+      x    = c(tr$x[i + 1L], tr$x[i] + slr * cos(bbr)),
+      y    = c(tr$y[i + 1L], tr$y[i] + slr * sin(bbr)),
+      sl   = c(sl[i], slr),
+      ta   = c(ta[i], tar),
+      case = c(1L, rep(0L, K_STEP)))
+    add_cov(d, matrix(dens[a, ], nrow(d), 2, byrow = TRUE))
+  }))
+}))
+step_data$log_sl <- log(step_data$sl)
+step_data$cos_ta <- cos(step_data$ta)
+
+## Random steps can land off-grid. Dropping the whole stratum keeps the
+## matched design intact; keeping it with NA would silently break the
+## conditional likelihood.
+step_data <- drop_incomplete_strata(
+  step_data, c("forest", "dist_water", "dist_den", "sl", "log_sl", "cos_ta"), "str")
+cat(sprintf("step data: %d strata, %d rows\n",
+            length(unique(step_data$str)), nrow(step_data)))
+
+
+###############################################################################
+## SECTION 6 -- Fit all four models
+###############################################################################
+
+## Conditional logistic regression, written out. For one case per stratum the
+## conditional likelihood is a softmax / multinomial logit:
+##   L(beta) = prod_k  exp(beta' x_k,used) / sum_{j in C_k} exp(beta' x_k,j)
+## Note there is NO intercept: any stratum-constant term cancels.
+clogit_manual <- function(formula, data, strata, case = "case", start = NULL) {
+  X <- model.matrix(formula, data)
+  X <- X[, colnames(X) != "(Intercept)", drop = FALSE]
+  storage.mode(X) <- "double"
+  y <- data[[case]]; s <- as.integer(factor(data[[strata]])); S <- max(s)
+  stopifnot(all(tabulate(s[y == 1L], S) == 1L))       # exactly one case/stratum
+  cr <- integer(S); cr[s[y == 1L]] <- which(y == 1L)  # row index of each case
+
+  nll <- function(b) {
+    lp <- as.vector(X %*% b)
+    if (max(abs(lp)) > 300) return(1e10)
+    -sum(lp[cr] - log(as.vector(rowsum(cbind(exp(lp)), s))))
+  }
+  ## Score has the classic "observed minus expected covariate" form.
+  gr <- function(b) {
+    lp <- as.vector(X %*% b)
+    if (max(abs(lp)) > 300) return(rep(0, ncol(X)))
+    e  <- exp(lp); p <- e / as.vector(rowsum(cbind(e), s))[s]
+    -colSums(X[cr, , drop = FALSE] - rowsum(p * X, s))
+  }
+  fit <- optim(if (is.null(start)) rep(0, ncol(X)) else start,
+               nll, gr, method = "BFGS", hessian = TRUE,
+               control = list(maxit = 1000, reltol = 1e-12))
+  se <- sqrt(diag(solve(fit$hessian)))
+  data.frame(term = colnames(X), estimate = fit$par, se = se,
+             z = fit$par / se, p = 2 * pnorm(-abs(fit$par / se)),
+             row.names = NULL)
+}
+
+tidy_glm <- function(m) {
+  s <- summary(m)$coefficients
+  data.frame(term = rownames(s), estimate = s[, 1], se = s[, 2],
+             z = s[, 3], p = s[, 4], row.names = NULL)
+}
+
+## --- MODEL 1: RSF. Pooled availability, one shared intercept. --------------
+m1_hr <- glm(case ~ forest + dist_water + dist_den, family = binomial,
+             weights = wt, data = rsf_hr)
+m1_sa <- glm(case ~ forest + dist_water + dist_den, family = binomial,
+             weights = wt, data = rsf_sa)
+
+## --- MODEL 2: SSF fit UNCONDITIONALLY -- the common mistake. ---------------
+## Movement-kernel availability, but strata thrown away.
+m2 <- glm(case ~ forest + dist_water + dist_den + sl + log_sl + cos_ta,
+          family = binomial, data = step_data)
+
+## --- MODEL 3: conditional RSF (matched case-control). ----------------------
+m3 <- clogit_manual(~ forest + dist_water + dist_den, crsf, strata = "str")
+
+## --- MODEL 4: conditional SSF = iSSA. --------------------------------------
+m4 <- clogit_manual(~ forest + dist_water + dist_den + sl + log_sl + cos_ta,
+                    step_data, strata = "str")
+
+## Optional cross-check of the hand-written likelihood.
+if (requireNamespace("survival", quietly = TRUE)) {
+  m4_chk <- survival::clogit(
+    case ~ forest + dist_water + dist_den + sl + log_sl + cos_ta +
+      survival::strata(str), data = step_data)
+  cat("\nmax |hand-written - survival::clogit| =",
+      signif(max(abs(coef(m4_chk) - m4$estimate)), 3), "\n")
+}
+
+
+###############################################################################
+## SECTION 7 -- Compare every model against the truth
+###############################################################################
+
+grab <- function(tab, term) {
+  i <- match(term, tab$term)
+  ifelse(is.na(i), NA_real_, tab$estimate[i])
+}
+cmp <- function(term) c(
+  truth                   = unname(TRUTH[term]),
+  `1_RSF_studyarea`       = grab(tidy_glm(m1_sa), term),
+  `1_RSF_homerange`       = grab(tidy_glm(m1_hr), term),
+  `2_SSF_unconditional`   = grab(tidy_glm(m2),    term),
+  `3_condRSF_matched500m` = grab(m3,              term),
+  `4_condSSF_iSSA`        = grab(m4,              term))
+
+comparison <- t(sapply(c("forest", "dist_water", "dist_den",
+                         "sl", "log_sl", "cos_ta"), cmp))
+cat("\n=== Coefficient estimates vs truth ===\n")
+print(round(comparison, 3))
+cat("\n(mean true forest coefficient across individuals =",
+    round(mean(b_forest_i), 3), ")\n")
+
+cat("\n=== Standard errors: forest ===\n")
+print(round(c(
+  `1_RSF_homerange`       = tidy_glm(m1_hr)$se[tidy_glm(m1_hr)$term == "forest"],
+  `2_SSF_unconditional`   = tidy_glm(m2)$se[tidy_glm(m2)$term == "forest"],
+  `3_condRSF_matched500m` = m3$se[m3$term == "forest"],
+  `4_condSSF_iSSA`        = m4$se[m4$term == "forest"]), 4))
+
+## iSSA back-transform: recover the selection-free movement kernel.
+b4 <- setNames(m4$estimate, m4$term)
+cat(sprintf(paste0("\niSSA movement kernel\n",
+                   "  shape:  tentative %.2f -> fitted %.2f (true %.2f)\n",
+                   "  rate:   tentative %.5f -> fitted %.5f (true %.5f)\n",
+                   "  kappa:  tentative %.2f -> fitted %.2f (true %.2f)\n"),
+            K0, K0 + b4["log_sl"], TRUE_SHAPE,
+            1 / THETA0, 1 / THETA0 - b4["sl"], TRUE_RATE,
+            KAPPA0, KAPPA0 + b4["cos_ta"], TRUE_KAPPA))
+
+## Why the intercept in an RSF is not a parameter you can interpret: refit with
+## a different number of available points and watch ONLY the intercept move.
+cat("\n=== RSF intercept is an artefact of the availability sample ===\n")
+for (mult in c(1, 5, 25)) {
+  sub <- do.call(rbind, lapply(split(rsf_hr, rsf_hr$id), function(d) {
+    av <- d[d$case == 0L, ]
+    rbind(d[d$case == 1L, ], av[sample(nrow(av), nrow(av) / 25 * mult), ])
+  }))
+  mm <- glm(case ~ forest + dist_water + dist_den, binomial, data = sub)
+  cat(sprintf("  %2dx available: intercept %+7.3f   forest %+6.3f\n",
+              mult, coef(mm)[1], coef(mm)["forest"]))
+}
+
+## Visual summary: forest coefficient with 95% CI across designs.
+est <- c(grab(tidy_glm(m1_sa), "forest"), grab(tidy_glm(m1_hr), "forest"),
+         grab(tidy_glm(m2), "forest"), grab(m3, "forest"), grab(m4, "forest"))
+sef <- c(tidy_glm(m1_sa)$se[tidy_glm(m1_sa)$term == "forest"],
+         tidy_glm(m1_hr)$se[tidy_glm(m1_hr)$term == "forest"],
+         tidy_glm(m2)$se[tidy_glm(m2)$term == "forest"],
+         m3$se[m3$term == "forest"], m4$se[m4$term == "forest"])
+labs <- c("RSF\nstudy area", "RSF\nhome range", "SSF\nunconditional",
+          "cond. RSF\nmatched 500 m", "cond. SSF\niSSA")
+op <- par(mar = c(5, 9, 4, 2))
+plot(est, seq_along(est), xlim = range(c(est - 2 * sef, est + 2 * sef, 0, 2.5)),
+     yaxt = "n", ylab = "", xlab = "Forest selection coefficient",
+     pch = c(21, 22, 23, 24, 25), bg = OI["skyblue"], cex = 1.6,
+     main = "Same animals, same covariates, five availability definitions")
+segments(est - 2 * sef, seq_along(est), est + 2 * sef, seq_along(est), lwd = 2)
+axis(2, at = seq_along(est), labels = labs, las = 1, cex.axis = 0.8)
+abline(v = mean(b_forest_i), lty = 2, lwd = 2, col = OI["verm"])
+text(mean(b_forest_i), 0.6, "truth", pos = 4, col = OI["verm"])
+par(op)
+
+cat("\nDone. Now open 02_exercises.R.\n")
+
+```
+
+```{r}
+## Point-in-polygon, base R only. Vectorised over points; loops over edges,
+## which is cheap because a convex hull has ~15-25 vertices.
+pip <- function(x, y, px, py) {
+  n <- length(px)
+  if (px[1] == px[n] && py[1] == py[n]) {          # drop the closing vertex
+    px <- px[-n]; py <- py[-n]; n <- n - 1L
+  }
+  j <- c(n, seq_len(n - 1L))                       # previous vertex of each edge
+  inside <- logical(length(x))
+  for (k in seq_len(n)) {
+    xi <- px[k];    yi <- py[k]
+    xj <- px[j[k]]; yj <- py[j[k]]
+    cross <- ((yi > y) != (yj > y)) &
+             (x < (xj - xi) * (y - yi) / (yj - yi) + xi)
+    inside <- xor(inside, cross)                   # odd number of crossings = in
+  }
+  inside
+}
+mcp_xy <- function(xy, pct = 95) {
+  ctr  <- colMeans(xy)
+  d    <- sqrt((xy[, 1] - ctr[1])^2 + (xy[, 2] - ctr[2])^2)
+  keep <- xy[d <= quantile(d, pct / 100), , drop = FALSE]
+  ch   <- chull(keep)
+  rbind(keep[ch, ], keep[ch[1], ])
+}
+ud_contour <- function(ud, level = 0.95, ...) {
+  contour(ud$xs, ud$ys, t(ud$z), levels = ud_threshold(ud, level),
+          drawlabels = FALSE, add = TRUE, ...)
+}
+
+a_show <- 1L
+u_show <- used_daily[used_daily$id == a_show, ]
+ah     <- track[track$id == a_show, ]
+ud_k   <- kde_grid(ah$x, ah$y, forest, h_ref(ah$x, ah$y))
+ud_b   <- bbmm_grid(ah$x, ah$y, forest, bb_sigma2m(ah$x, ah$y))
+
+## --- The four home-range / UD estimators on one page ------------------------
+op <- par(mfrow = c(2, 2), mar = c(2.2, 2.2, 2.4, 0.8), mgp = c(1.3, 0.4, 0),
+          tcl = -0.25, cex.axis = 0.7, cex.main = 0.95)
+
+rast_image(forest, col = grey.colors(32, start = 1, end = 0.3), main = "study area")
+rect(X0, Y0, X0 + NX * RES, Y0 + NY * RES, border = OI["blue"], lwd = 2.5)
+points(ah$x, ah$y, pch = 16, cex = 0.12, col = OI["orange"])
+points(u_show$x, u_show$y, pch = 17, cex = 0.6, col = OI["verm"])
+legend("topright", bty = "n", cex = 0.6,
+       legend = c("hourly track", "used (daily)", "domain"),
+       pch = c(16, 17, NA), lty = c(NA, NA, 1), lwd = c(NA, NA, 2.5),
+       col = c(OI["orange"], OI["verm"], OI["blue"]))
+
+rast_image(forest, col = grey.colors(32, start = 1, end = 0.3), main = "MCP 95%")
+polygon(mcp_xy(cbind(ah$x, ah$y), 95), border = OI["blue"], lwd = 2.5)
+points(u_show$x, u_show$y, pch = 17, cex = 0.6, col = OI["verm"])
+
+rast_image(ud_k, col = grey.colors(32, start = 1, end = 0.3), main = "KDE 95% / 50%")
+ud_contour(ud_k, 0.95, col = OI["blue"], lwd = 2.5, lty = 1)
+ud_contour(ud_k, 0.50, col = OI["verm"], lwd = 2.5, lty = 2)
+legend("topright", bty = "n", cex = 0.6, lwd = 2.5, lty = c(1, 2),
+       col = c(OI["blue"], OI["verm"]), legend = c("95%", "50% core"))
+
+rast_image(ud_b, col = grey.colors(32, start = 1, end = 0.3), main = "BBMM 95%")
+ud_contour(ud_b, 0.95, col = OI["blue"], lwd = 2.5, lty = 1)
+ud_contour(ud_k, 0.95, col = OI["verm"], lwd = 2.5, lty = 2)
+legend("topright", bty = "n", cex = 0.6, lwd = 2.5, lty = c(1, 2),
+       col = c(OI["blue"], OI["verm"]), legend = c("BBMM", "KDE"))
+par(op)
+
+## --- The same four domains, as the available POINTS the glm will see --------
+op <- par(mfrow = c(2, 2), mar = c(2.2, 2.2, 2.4, 0.8), mgp = c(1.3, 0.4, 0),
+          tcl = -0.25, cex.axis = 0.7, cex.main = 0.95)
+for (nm in c("study_area", "mcp_95", "kde_95", "bbmm_95")) {
+  rast_image(forest, col = grey.colors(32, start = 1, end = 0.3),
+             main = gsub("_", " ", nm))
+  av <- switch(nm,
+    study_area = cbind(runif(1500, X0, X0 + NX * RES), runif(1500, Y0, Y0 + NY * RES)),
+    mcp_95     = { p <- mcp_xy(cbind(ah$x, ah$y), 95)
+                   xx <- runif(60000, min(p[, 1]), max(p[, 1]))
+                   yy <- runif(60000, min(p[, 2]), max(p[, 2]))
+                   k  <- as.logical(pip(xx, yy, p[, 1], p[, 2]))
+                   cbind(xx, yy)[k, ][seq_len(min(1500, sum(k))), ] },
+    kde_95     = sample_from_ud(ud_k, 0.95, 1500),
+    bbmm_95    = sample_from_ud(ud_b, 0.95, 1500))
+  points(av[, 1], av[, 2], pch = 1, cex = 0.3, col = OI["green"])
+  points(u_show$x, u_show$y, pch = 17, cex = 0.6, col = OI["verm"])
+  if (nm == "study_area")
+    legend("topright", bty = "n", cex = 0.6,
+           legend = c("used", "available"), pch = c(17, 1),
+           col = c(OI["verm"], OI["green"]))
+}
+par(op)
+
+## --- Fix interval drives the bandwidth, and so the area (E3 preview) -------
+by_v <- c(1, 6, 24, 72)
+ar   <- sapply(by_v, function(b) {
+  xy <- cbind(ah$x, ah$y)[seq(1, nrow(ah), by = b), , drop = FALSE]
+  c(n = nrow(xy), h = h_ref(xy[, 1], xy[, 2]),
+    area = ud_area_km2(kde_grid(xy[, 1], xy[, 2], forest, h_ref(xy[, 1], xy[, 2])), 0.95))
+})
+op <- par(mfrow = c(1, 2), mar = c(4.2, 4.2, 3, 1))
+plot(by_v, ar["h", ], type = "b", pch = 19, log = "x", xlab = "fix interval (h)",
+     ylab = "h_ref (m)", main = "Bandwidth shrinks with n")
+plot(by_v, ar["area", ], type = "b", pch = 15, log = "x", xlab = "fix interval (h)",
+     ylab = "KDE 95% area (km2)", main = "...so the 'home range' changes")
+
+
+
+```
+
+## Comparison
+
+```{r}
+cat("\n=== Four availability domains ===\n")
+n_av <- function(u) nrow(u) * 50L
+
+avail_fun <- list(
+  study_area = function(a, u) cbind(x = runif(n_av(u), X0, X0 + NX * RES),
+                                    y = runif(n_av(u), Y0, Y0 + NY * RES)),
+  mcp_95 = function(a, u) {
+    p <- mcp(cbind(track$x[track$id == a], track$y[track$id == a]), 95)
+    pts <- st_coordinates(st_sample(p, n_av(u), type = "random"))
+    while (nrow(pts) < n_av(u))                      # st_sample can under-deliver
+      pts <- rbind(pts, st_coordinates(st_sample(p, n_av(u), type = "random")))
+    pts[seq_len(n_av(u)), 1:2]
+  },
+  kde_95 = function(a, u) {
+    ah <- track[track$id == a, ]
+    sample_from_ud(kde_grid(ah$x, ah$y, forest, h_ref(ah$x, ah$y)), 0.95, n_av(u))
+  },
+  bbmm_95 = function(a, u) {
+    ah <- track[track$id == a, ]
+    sample_from_ud(bbmm_grid(ah$x, ah$y, forest, bb_sigma2m(ah$x, ah$y)), 0.95, n_av(u))
+  })
+
+e2 <- t(sapply(names(avail_fun), function(nm) {
+  d <- do.call(rbind, lapply(seq_len(N_ANIMALS), function(a) {
+    u  <- used_daily[used_daily$id == a, ]
+    av <- avail_fun[[nm]](a, u)
+    dd <- rbind(data.frame(id = a, x = u$x, y = u$y, case = 1L),
+                data.frame(id = a, x = av[, 1], y = av[, 2], case = 0L))
+    add_cov(dd, matrix(dens[a, ], nrow(dd), 2, byrow = TRUE))
+  }))
+  d <- d[complete.cases(d[, c("forest", "dist_water", "dist_den")]), ]
+  d$wt <- ifelse(d$case == 1L, 1, 5000)
+  m <- glm(case ~ forest + dist_water + dist_den, binomial, weights = wt, data = d)
+  c(forest            = unname(coef(m)["forest"]),
+    dist_water        = unname(coef(m)["dist_water"]),
+    dist_den          = unname(coef(m)["dist_den"]),
+    mean_avail_forest = mean(d$forest[d$case == 0L]))
+}))
+print(round(e2, 3))
+cat("mean USED forest =",
+    round(mean(rast_get(forest, used_daily$x, used_daily$y)), 3),
+    "| true step-scale forest beta =", round(mean(b_forest_i), 3), "\n")
+```
+  
+**Questions:**  
+
+1. If we plot the fourth column against the first. What is the relationship?  
+
+2. Johnson (1980) defined orders of selection. Label each of the four rows with an order, and say what question each one answers in plain English.  
+
+3. Which of these four is "correct"? Justify your answer in one sentence.
+
+:::{.notes}
+Expect study_area > mcp_95 ~ kde_95 > bbmm_95, tracking the mean availability of forest in the last column: the further the availability pool sits from the used points, the bigger the "selection". 
+Orders of selection: study_area mixes second (range placement) with third (within-range use); the others are closer to third. None of them equals the step-scale truth, and none is "correct" in the abstract, each answers a different question. This is the single most important idea.
+
+Negative, and steep. Slope ≈ −4.2, r ≈ −0.77. As the availability pool becomes more like the used points, the apparent selection shrinks. Mean cover at used points is 0.722; all four denominators sit well below it (0.488 → 0.588), which is why all four report positive selection. The narrower the gap, the smaller the coefficient.
+
+The clean version of the pattern is in the other two columns, not the first. dist_water is perfectly monotone: −0.578, −0.466, −0.374, −0.312, decaying toward zero as the denominator tightens. dist_den nearly so. These are the textbook demonstration that a coefficient is a contrast against a denominator you chose.
+
+forest is deliberately the messy one, and that's the more interesting finding. It is not monotone — mcp_95 has the largest coefficient (2.621) despite a more forested availability pool than study_area (0.508 vs 0.488). Two mechanisms, both worth putting to the class:
+
+An MCP is convex by construction, so it swallows low-forest pockets inside the hull that the animal demonstrably never entered. Those are counted as available. A smaller region can therefore produce a stronger apparent preference than the whole study area. Mean availability alone doesn't determine the coefficient — the shape of the availability distribution does.
+These are partial coefficients. forest, dist_water and dist_den are correlated, and the contrast in all three shifts together when you change domains. Look at dist_den: −3.131 under study-area availability versus −2.039 under the MCP. Part of what forest is doing under one denominator gets absorbed by dist_den under another.
+
+The bonus result. Only bbmm_95 lands on the truth (2.066 against 2.088). Not luck in mechanism, though possibly in precision: a Brownian bridge availability domain is built from the movement process, so of the four it is the closest approximation to the step-scale denominator the data were actually generated under. That's the thread into Exercise 5 — move the availability kernel toward the movement kernel and the RSF estimate moves toward the SSF estimate. With a single realisation and no confidence intervals on these four points, treat the exact agreement as suggestive; re-run with a different seed before claiming it in a lecture.
+
+The thing students should not conclude is that BBMM is therefore "the right RSF." It landed near the step-scale truth because this simulation generated data at the step scale. Had the question been about range placement, the study-area row would be the relevant answer and the BBMM row the misleading one.
+:::
+
+
+## Autocorrelation
+
+
+```{r}
+cat("\n=== Fix interval, bandwidth, and area ===\n")
+for (by in c(1, 6, 24, 72)) {
+  xy <- xy1[seq(1, nrow(xy1), by = by), , drop = FALSE]
+  h  <- h_ref(xy[, 1], xy[, 2])
+  cat(sprintf("every %3d h  n=%4d  h_ref=%4.0f m  area(h_ref)=%5.2f  area(h=150)=%5.2f km2\n",
+              by, nrow(xy), h,
+              ud_area_km2(kde_grid(xy[, 1], xy[, 2], forest, h),   0.95),
+              ud_area_km2(kde_grid(xy[, 1], xy[, 2], forest, 150), 0.95)))
+}
+
+```
+
+1. h_ref = sigma * n^(-1/6). What does the "n" in that formula assume about the fixes? Is that assumption true for a 1-hour GPS track?  
+
+2. Two studies report home ranges for the same species, one from VHF fixes every 3 days and one from GPS fixes every 15 min. Can you compare them?  
+
+3. Look up autocorrelated KDE (AKDE). What quantity does it substitute for n?
+
+:::{.notes}
+h_ref shrinks as n grows (n^(-1/6)), so hourly data give a spiky UD and a SMALLER 95% area than daily data, even though the animal's range is  identical. Holding h fixed largely removes the effect, which localises the problem in the bandwidth rule, not the kernel. The n in h_ref is an
+INDEPENDENT sample size; AKDE substitutes an effective sample size from a fitted continuous-time movement model (Fleming et al. 2015).
+:::
+
+## Exit ticket {#gz-exit}
+
+::: activity
+1.  Define "available" for **your** species in one sentence, and say which of Johnson's orders that makes your analysis.
+2.  Your model says the animal selects habitat X. Give one reason X might still be **bad** habitat.
+3.  Your reviewer asks for a probability of selection. What do you need that you may not have?
+:::
+
+::: notes
+Q2 TARGET: Van Horne and the ecological trap. Selection is a behaviour,
+not a fitness measurement — without demography you have documented a
+preference, not established quality. Same gap Chapter 7 flagged between
+distributions and niches.
+
+Q3 TARGET, straight from Lele et al.: to fit an RSPF rather than an RSF
+you need at least one CONTINUOUS covariate — with all-categorical
+covariates the probability of selection is not estimable at all — plus a
+substantial number of used points, generally 300 to 500 for stable
+estimates, and a non-exponential link such as logistic, probit or
+complementary log-log. The exponential model cannot deliver it, because
+its intercept is not estimable.
+
+A student who writes "a continuous covariate and a few hundred points"
+has read the paper properly.
+:::
+
+```{=html}
+<!--
+# 2.2 Selection Functions
+
+## Point Selection (RSF)
+
+- Compares used coordinates directly to random available coordinates.
+- Formulated using selection ratios (selectivity indices like Manly's
+  alpha) or standard logistic regressions:
+  $$w(x) = \exp(\beta_0 + \beta_1 x_1 + \dots + \beta_k x_k)$$
+
+::: notes
+Point selection (RSF) ignores the sequential path of movement. It simply
+pools points and compares them to background points.
+:::
+
+## Step Selection (SSF)
+
+- Compares used locations at time $t$ to local available locations
+  generated from the movement trajectory at time $t-1$.
+- Uses step lengths and turning angles to sample realistic alternatives.
+- Analyzed using **conditional logistic regression** (`clogit` in
+  `survival`) to honor the matched pairs/strata.
+
+::: notes
+Step Selection Functions (SSFs) are much more realistic: they ask, "At
+this moment, given where the animal was 30 minutes ago, why did it
+choose this direction instead of the other options?"
+:::
+
+## Path Selection (PSF)
+
+- Compares the entire observed path of an individual to randomly
+  simulated alternate pathways (e.g., using random rotations or
+  correlated random walks).
+
+::: notes
+Path selection scales this up to compare entire trajectories.
+:::
+-->
+```

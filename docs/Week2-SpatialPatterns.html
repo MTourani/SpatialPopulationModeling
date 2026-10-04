@@ -445,7 +445,7 @@
   <meta name="generator" content="quarto-1.10.18">
 
   <meta name="author" content="Mahdieh Tourani">
-  <meta name="dcterms.date" content="2026-09-17">
+  <meta name="dcterms.date" content="2026-10-04">
   <title>Spatial Population Modeling – WILD 591 – Spatial Population Modeling</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -25138,7 +25138,7 @@ Mahdieh Tourani
 </div>
 </div>
 
-  <p class="date">2026-09-17</p>
+  <p class="date">2026-10-04</p>
 </section>
 <section>
 <section id="where-were-going" class="title-slide slide level1 center">
@@ -25178,7 +25178,7 @@ display:block!important;
 </blockquote>
 <p><strong>Autocorrelation</strong> is the relationship between values of a variable with itself according to distance.</p>
 
-<img role="img" data-src="images/autocheck.PNG" class="quarto-figure quarto-figure-center r-stretch"><aside class="notes">
+<img role="img" data-src="images/autocheck.png" class="quarto-figure quarto-figure-center r-stretch"><aside class="notes">
 <p>Last week we talked about the role of space covered some theoretical foundation for the role of space in ecological studies and touched on the importance of incorporating spatial information.</p>
 <p>We talked about Tobler’s First Law of Geography… Everything is…</p>
 <p>Autocorrelation… Can be positive, or negative For example here: Positive autocorrelation, where darker values are closer together, and negative autocorrelation where dark cells are further apart from one another. CHECKBOARD</p>
@@ -27566,82 +27566,6 @@ window.QuartoSupport = function () {
     window._ojs.selfContained = true;
     window._ojs.runtime.interpretFromScriptTags();
     </script>
-    
-
-    <script>
-
-      // htmlwidgets need to know to resize themselves when slides are shown/hidden.
-
-      // Fire the "slideenter" event (handled by htmlwidgets.js) when the current
-
-      // slide changes (different for each slide format).
-
-      (function () {
-
-        // dispatch for htmlwidgets
-
-        function fireSlideEnter() {
-
-          const event = window.document.createEvent("Event");
-
-          event.initEvent("slideenter", true, true);
-
-          window.document.dispatchEvent(event);
-
-        }
-
-    
-
-        function fireSlideChanged(previousSlide, currentSlide) {
-
-          fireSlideEnter();
-
-    
-
-          // dispatch for shiny
-
-          if (window.jQuery) {
-
-            if (previousSlide) {
-
-              window.jQuery(previousSlide).trigger("hidden");
-
-            }
-
-            if (currentSlide) {
-
-              window.jQuery(currentSlide).trigger("shown");
-
-            }
-
-          }
-
-        }
-
-    
-
-        // hookup for slidy
-
-        if (window.w3c_slidy) {
-
-          window.w3c_slidy.add_observer(function (slide_num) {
-
-            // slide_num starts at position 1
-
-            fireSlideChanged(null, w3c_slidy.slides[slide_num - 1]);
-
-          });
-
-        }
-
-    
-
-      })();
-
-    </script>
-
-    
-
     <script id="quarto-html-after-body" type="application/javascript">
       window.document.addEventListener("DOMContentLoaded", function (event) {
         const tabsets =  window.document.querySelectorAll(".panel-tabset-tabby")
