@@ -1,0 +1,1440 @@
+---
+title: "WILD 591 – Spatial Population Modeling"
+subtitle: "Lesson 9: Metapopulation"
+author: "Mahdieh Tourani"
+date: last-modified
+lang: en
+format:
+  live-revealjs:
+    self-contained: true
+    theme: [serif, wild541.scss]
+    slide-number: true
+    show-slide-number: all
+    scrollable: true
+    controls: true
+    width: 1050
+    height: 700
+    margin: 0.1
+engine: knitr
+title-slide-attributes:
+  data-background-image: "images/cover-ch1.jpg"
+  data-background-size: "30%"
+  data-background-position: "right 1px bottom 1px"
+  
+---
+
+{{< include ./_extensions/r-wasm/live/_knitr.qmd >}}
+
+
+# Where we're going {.center}
+
+## Roadmap for today
+
+1.  Metapopulation theory
+2.  Dynamic occupancy framework
+
+# 1.1 Metpopulation
+
+## Spatial Ecology Timeline
+
+```{r, echo = FALSE}
+yr  <- c(1947, 1951, 1958, 1967, 1969, 1997, 1999, 2003, 2004)
+lab <- c("Watt\npattern & process", "Skellam\nreaction-diffusion",
+         "Huffaker\nspatial refugia", "MacArthur & Wilson\nisland biogeography",
+         "Levins\nmetapopulation", "Tilman & Kareiva\n'spatial ecology'",
+         "Hanski\nmetapopulation ecology", "Loreau\nmetaecosystem",
+         "Leibold\nmetacommunity")
+## four stagger levels so the 1997-2004 cluster does not overlap
+lev <- c(1.20, -1.20, 0.62, -0.62, 1.20, -1.20, 0.62, -0.62, 1.20)
+
+op <- par(mar = c(2.6, 0, 0.4, 0))
+plot(NA, xlim = c(1938, 2016), ylim = c(-1.75, 1.75), axes = FALSE, xlab = "", ylab = "")
+abline(h = 0, lwd = 3, col = "#70002E")
+axis(1, at = seq(1950, 2010, 10), col = "#333333", col.axis = "#333333", cex.axis = 0.8)
+segments(yr, 0, yr, lev * 0.72, col = "#767676", lwd = 2)
+points(yr, rep(0, length(yr)), pch = 21, bg = "#EFE8D4", col = "#70002E", cex = 1.5, lwd = 2)
+text(yr, lev, lab, cex = 0.58, col = "#333333")
+```
+
+## Island biogeography: MacArthur & Wilson
+
+> Patch size and spatial configuration govern persistence through
+> colonization and extinction.
+
+![](images/islandbiog.JPG){fig-align="center"}
+
+- **Area** → extinction rate (bigger islands, smaller extinction risk)
+- **Isolation** → colonisation rate (nearer islands, higher
+  colonisation)
+
+::: notes
+Groups traded off patch size against isolation with 25 cells. That is
+the theory
+
+If your individuals are allowed to disperse from a mainland source to
+sourranding islands: islands closer to the mainland have a higher
+colonization rate bigger islands have a smaller extinction risk.
+:::
+
+## Spreading the risk
+
+If local extinction probability is $p_e$ and patches are
+**independent**, the probability that a metapopulation of *N* patches
+persists one year is:
+
+$$1 - (p_e)^N$$
+
+```{r}
+#| fig-width: 9
+#| fig-height: 5.2
+N <- 0:20
+op <- par(mar = c(4.4, 4.6, 2.4, 1))
+plot(NA, xlim = c(0, 20), ylim = c(0, 1), xlab = "number of patches",
+     ylab = "metapopulation persistence, 1 year",
+     main = "each line is a local extinction probability")
+cols <- hcl.colors(9, "Viridis")
+for (k in 1:9) {
+  pe <- k / 10
+  lines(N, 1 - pe^N, lwd = 2.6, col = cols[k])
+  text(20.4, 1 - pe^20, pe, cex = 0.8, col = cols[k], xpd = TRUE, adj = 0)
+}
+par(op)
+```
+
+::: notes
+This is the simplest possible argument for why metapopulations matter.
+
+Persistence for t years in ONE patch is (1 - p_e)\^t. For N INDEPENDENT
+patches in one year it is 1 - p_e\^N, which is "the probability that at
+least one patch does not go extinct."
+
+Look at the curve for p_e = 0.5. One patch gives you a coin flip. Five
+patches gives you 97%. Ten gives you 99.9%. That is den Boer's (1968)
+"spreading the risk," and it is why reserve networks beat single
+reserves.
+
+Now the crucial caveat, and it is: this requires INDEPENDENCE. No spatial synchrony. If
+patches fluctuate together, N patches behave like far fewer, and the curve flattens dramatically. Lab B measures synchrony for exactly this
+reason.
+:::
+
+## From islands to metapopulations
+
+> Dispersal can protect a local population from extinction.
+
+$$\frac{d \psi}{dt} = I - E$$
+
+$$I = c \psi (1-\psi) \qquad E = \epsilon \psi$$
+
+How to model metapopulation dynamics?
+
+➢ each patch can be occupied (1) or unoccupied (0)
+
+➢ at each time step, occupied patches go extinct with probability ε
+
+➢ individuals emigrate from occupied patches with probability c
+
+➢ objective is to estimate the fraction of patches occupied ѱ
+
+<!-- ![](images/highcon.PNG){width = "10%"} -->
+
+<!-- ![](images/metapop.PNG){width = "10%"} -->
+
+::: notes
+Dispersal ... . This is a schematic of our metapop. Some sites are
+occupied, some aren't. At each timestep, occupied patches go extinct
+with a probability...
+
+Fraction of patches occupied over time is determined by Immigration and Extinction.
+
+Immigration is a PRODUCT of two things: how many patches are supplying
+(psi, times the per-patch emigration rate c), and how
+many patches are available to receive them (1 - psi).
+
+Extinction is simpler: only occupied patches can go extinct, so E = extinction prob multiplied by psi.
+
+- $c$ — rate of individuals emigrating from occupied patches NOT the
+  same as probability of colonization
+- $epsilon$ — probability of local extinction
+- $(1-psi)$ — the proportion of sites available to colonize
+:::
+
+## Metapopulation dynamic: Levins 1969
+- Spatially Implicit Model: Tracks fraction of occupied patches
+
+$$\frac{d\psi}{dt} = c \psi(1-\psi) - \epsilon \psi$$
+
+- **Equilibrium Occupancy**:
+Set $d \psi/dt = 0$ and solve:$$\psi^* = 1 - \frac{\epsilon}{c}$$
+
+So the metapopulation persists ($\psi^* > 0$) **only when**
+$c > \epsilon$.
+
+- Limitations: Ignores spatial configuration, patch heterogeneity,  and observation error.
+  
+::: notes
+If there are more patches in a metapop, then the extinction risk will be
+lower. ...
+
+At any point in time, what proportion of sites will go extinct?
+
+At any point in time, what proportion of sites will be colonized?
+
+At any point in time, what proportion of sites will be occupied?
+
+Levins 1969 is a two-page paper in a newsletter of the Entomological
+Society of America.
+
+Note that INTERNAL colonization is permitted -- colonists come from
+within the system. That contrasts with the basic island biogeography
+model, where propagules arrive from an external mainland
+
+Note what psi\* does NOT depend on: the number of patches. That is
+because the Levins model treats space as implicit -- an infinite pool of
+identical patches. Relaxing that is what the incidence function model
+does.
+
+c in the Levins model is the rate of individuals EMIGRATING from
+occupied patches. It is NOT the same quantity as gamma, the probability
+an empty patch becomes colonized in one time step, which is what a
+dynamic occupancy model estimates. So "gamma \< epsilon means
+extinction" does not follow from "c \< e means extinction." We will see
+exactly that apparent paradox in Lab E.
+:::
+
+## Why heterogeneity matters?
+
+Extinction rate declines with area, because:
+
+- larger patches hold more individuals
+- larger patches have more heterogeneous resources so something is always available.
+- and larger patches can support metapopulation-like dynamics internally.
+
+::: notes
+There are different mechanisms for why extinction declines with area...
+
+Moilanen & Hanski (1998) extend area to EFFECTIVE area if quality or
+edge effects vary.
+:::
+
+## Why synchrony matters?
+
+The Levins model assumed **asynchronous** patch dynamics. If that fails:
+
+- greater vulnerability to environmental stochasticity
+- higher likelihood of local and metapopulation extinction 
+
+**Why does synchrony occur?** Localized **dispersal** · spatial
+dependence in **trophic interactions** · abiotic variation such as
+weather — the **Moran effect**
+
+:::{ .notes}
+This is the assumption from the spreading-the-risk slide, now examined.
+
+The three mechanisms are worth distinguishing because they imply
+different management. DISPERSAL-driven synchrony declines with distance
+and could in principle be managed. The MORAN EFFECT -- shared weather --
+cannot be, and it is the mechanism behind Koenig & Liebhold's (2016)
+finding that North American wintering bird populations have become MORE
+synchronous over 50 years of warming.
+
+Liebhold et al. (2004) is this week's third reading and the definitive
+treatment. The hard part is that these three mechanisms are very
+difficult to distinguish from time series alone.
+
+Note the INFLATIONARY EFFECT as a counterweight (Gonzalez & Holt 2002):
+temporally autocorrelated environments can sometimes INCREASE population
+growth through strings of good years. Autocorrelation in time is not
+uniformly bad.
+:::
+
+
+
+# 1.2 Spatially Explicit Metapopulations
+## Connectivity
+- Incidence Function Model (Hanski 1994):
+  - Patch-specific colonization depends on connectivity $S_i$ :
+    $$S_i = \sum_{j \neq i} \exp(-\alpha d_{ij}) A_j$$
+
+- **Area-Isolation Paradigm**: Patch area $A_i$ reduces extinction,
+  isolation $d_{ij}$ reduces colonization.
+
+::: notes
+Levins model assumes:
+- patches are **homogeneous** in area, quality, isolation
+- no spatial structure — every patch is equally reachable
+- patch dynamics are **asynchronous** (independent)
+- c and $\epsilon$ are **constant**
+- **no time lags**
+- a **large number** of patches
+
+Six assumptions, and essentially the whole subsequent literature is a
+relaxation of one of them.
+
+Homogeneity and no spatial structure -\> the incidence function model,
+next. 
+
+Hanski's patch-level connectivity metric $S$ for each patch $i$ based on
+patch area $A_j$ and distance $d_{ij}$ to all other patches:
+
+$$S_i = \sum_{j \neq i} \exp(-\alpha d_{ij}) A_j$$ \
+
+Connectivity of any focal patch i, is a decaying function of distance
+bet the focal patch and source patch alpha is the dispersal
+parameter:/alpha represents average dispersal distance
+
+sum of all other source patches j (excluding the focal patch i)
+
+
+Asynchrony -\> the synchrony literature, and Lab B. Constant rates
+-\> covariates on colonization and extinction, which is Lab D.
+
+The RESCUE EFFECT is a further variant: recurrent immigration LOWERS
+extinction rates, so e is not independent of f (Gotelli 1991).
+
+Tilman & Lehman (1997) took the framework to the individual level, where
+a "local population" is a site holding a single individual -- a bird
+territory, a sessile organism -- with priority effects and preemption.
+Same mathematics, very different biology.
+Hanski (1994) relaxed the homogeneity assumptions. **Extinction depends
+on patch area size and isolation.**
+
+:::
+
+## Take home
+
+✓ Unoccupied sites are "rescued" by colonization from occupied sites
+
+✓ Critical to maintain patches, even if they are currently unoccupied
+
+✓ Connectivity of patches important for increasing colonization
+probability
+
+> More patches leads to lower metapopulation extinction risk
+
+## Stochastic Patch Occupancy Models (SPOMs)
+
+- **Discrete-Time First-Order Markov Chain**:
+  - State transition vector for patch $i$:
+    $$P(z_{i,t+1}=1) = z_{i,t}(1 - \epsilon_i) + (1 - z_{i,t}) \gamma_i(S_i)$$
+- **Rescue Effect**: Recurrent immigration lowers apparent extinction
+  rate
+
+````{=html}
+<!--
+## Figure 10.3 (redrawn) — the functional forms
+
+```{r}
+#| fig-width: 12.5
+#| fig-height: 4.6
+A <- seq(0.5, 20, length.out = 300)
+d <- seq(0, 20, length.out = 300)
+
+op <- par(mfrow = c(1, 3), mar = c(4.4, 4.6, 3, 1))
+
+plot(NA, 
+     xlim = c(0, 20),
+     ylim = c(0, 1), 
+     xlab = "patch area, A",
+     ylab = "extinction probability", 
+     main = "(a) varying z  (x = 1)")
+
+for (k in seq_along(zs <- c(0.5, 1, 1.5, 2))) {
+    lines(A, 
+        pmin(1, zs[k] / A^1),
+        lwd = 2.6, 
+        col = hcl.colors(4, "Dark 3")[k])
+legend("topright", 
+       bty = "n", 
+       lwd = 2.6,
+       col = hcl.colors(4, "Dark 3"),
+       legend = paste("z =", zs),
+       cex = 0.95)
+plot(NA,
+     xlim = c(0, 20), 
+     ylim = c(0, 1),
+     xlab = "patch area, A",
+     ylab = "", 
+     main = "(b) varying x  (z = 1)")
+}
+
+for (k in seq_along(xs <- c(0.5, 1, 1.5, 2))){
+lines(A, 
+      pmin(1, 1 / A^xs[k]), 
+      lwd = 2.6, 
+      col = hcl.colors(4, "Dark 3")[k])
+legend("topright",
+       bty = "n", 
+       lwd = 2.6,
+       col = hcl.colors(4, "Dark 3"),
+       legend = paste("x =", xs),
+       cex = 0.95)
+plot(NA, 
+     xlim = c(0, 20), 
+     ylim = c(0, 1),
+     xlab = "distance, d",
+     ylab = "dispersal weight",
+     main = "(c) varying alpha")
+}
+ 
+for (k in seq_along(as <- c(0.05, 0.1, 0.2, 0.5))){
+lines(d, 
+      exp(-as[k] * d),
+      lwd = 2.6,
+      col = hcl.colors(4, "Dark 3")[k])
+legend("topright",
+       bty = "n",
+       lwd = 2.6,
+       col = hcl.colors(4, "Dark 3"),
+       legend = paste("alpha =", as),
+       cex = 0.95)
+}
+
+par(op)
+```
+
+::: notes
+Panel (a): z scales the magnitude of extinction, and the book interprets
+it as capturing environmental stochasticity.
+
+Panel (b): x controls the SHAPE. When x is small, below 1, even large
+patches still suffer extinction -- the curve barely falls. That is the
+difference between a system where big reserves are safe and one where
+they are not.
+
+Panel (c): alpha is the inverse of mean dispersal distance, so LARGER
+alpha means a steeper kernel and a more dispersal-limited species. For
+our orchid, mean dispersal is 4.8 m so alpha is about 0.21.
+
+Hanski (1999) argues the exact kernel shape often does not matter much
+for metapopulation dynamics, because they are driven by relatively SHORT
+dispersal events. But it matters a great deal for range expansion and
+invasion, where occasional very long-distance events dominate -- fat
+tails, as in Chapter 9's kernel fitting.
+:::
+
+ 
+## Incidence, and a provocative shortcut
+
+$$J_i = \frac{C_i}{C_i + E_i}$$
+
+This means a **snapshot** of occurrence data could be used to estimate
+$C_i$ and $E_i$.
+
+**But** it assumes the metapopulation is at long-term quasi-equilibrium
+— that is, persistent (Moilanen 2000).
+
+Drop that assumption and any observed trend in occupancy is **real**,
+not a stochastic wobble around equilibrium.
+
+::: notes
+This is the provocative claim in Hanski (1994): one survey, and you can
+infer the dynamics. Very attractive for conservation, where time series
+are rare.
+
+And it rests entirely on the equilibrium assumption, which has real
+consequences either way. Assume equilibrium and you may explain away a
+genuine decline as noise. Drop it and you need time series.
+
+Note the same equilibrium form appears in Lab E as psi\* = gamma /
+(gamma + epsilon) for the dynamic occupancy model. Same algebra,
+different parameters.
+
+Applications: long-term effects of deforestation (Ferraz et al. 2007),
+golden eagle occupancy dynamics (Martin et al. 2009), and Florida scrub
+lizard, where Hokit et al. (2001) found the IFM and a full population
+projection model gave broadly similar predicted distributions.
+:::
+
+ -->
+````
+
+## Example: Lepanthes rupestris Orchid
+
+- 841 patches monitored over 10 surveys (5 years with 2 surveys per
+  year)
+- Surveys are grouped into 5 **Primary Periods** (years) and 2
+  **Secondary Periods** (within-year surveys to account for imperfect
+  detection).
+- Pollock's Robust Design :
+  - Population is **closed** within a year (secondary periods).
+  - Population is **open** to colonization/extinction between years
+    (primary periods).
+
+
+```{r}
+#| echo: true
+# Simulate orchid robust design dataset (100 sites, 5 primary periods, 2 secondary surveys)
+set.seed(42)
+sites <- data.frame(siteID = 1:100,
+                    x      = runif(100, 0, 1000),
+                    y      = runif(100, 0, 1000), 
+                    area   = runif(100, 1, 10))
+# Generate presence/absence matrices (100 rows x 10 columns)
+obs_matrix <- matrix(rbinom(1000, 1, 0.3), nrow = 100)
+print(head(obs_matrix, 3))
+```
+
+::: notes
+Explain Pollock's Robust Design. 
+
+The robust design -- primary periods open to colonization and
+extinction, secondary surveys within them assumed closed -- is what
+makes detection estimable (Pollock 1982). You need the repeat visits.
+
+By surveying twice a year, we can
+calculate detection probability (whether we missed the orchid when it
+was actually there). This ensures our colonization and extinction
+estimates are unbiased by sampling error!
+
+:::
+
+## Calculate Connectivity Metric
+
+```{r}
+#| echo: true
+# Calculate distance matrix (in meters)
+dist_matrix <- as.matrix(dist(cbind(sites$x, sites$y)))
+
+# Define alpha (1 / mean dispersal distance of Lepanthes = 4.8 meters)
+meandist <- 4.8
+alpha <- 1 / meandist
+
+# Compute S matrix algebra
+g <- exp(-alpha * dist_matrix)
+diag(g) <- 0
+S <- rowSums(sweep(g, 2, sites$area, "*"))
+
+cat("Connectivity S for first 5 patches:", head(S, 5), "\n")
+```
+
+:::{.notes}
+
+We use distance-weighted area. Close, massive patches contribute highly to patch i's connectivity. Alpha represents the inverse of the species' mean dispersal distance. For this orchid, seeds are wind-dispersed but drop quickly, so mean dispersal is very short (\~4.8 meters).
+:::
+
+<!--
+## Modeling Colonization-Extinction 
+We can quantify how model parameters vary with area:  
+
+- $\psi$ (initial occupancy probability)  
+- $\gamma$ (colonization probability)  
+- $\epsilon$ (extinction probability)  
+- $p$ (detection probability) 
+
+```{r}
+#| echo: true
+library(unmarked)
+# Create unmarked frame for robust design
+DO_data <- unmarked::unmarkedMultFrame(y = obs_matrix,
+                                       siteCovs = sites,
+                                       numPrimary = 5)
+
+# Fit model where: psi is constant, gamma is constant, extinction depends on patch area, p depends on area
+fit_colext <- unmarked::colext(psiformula = ~ 1, 
+                               gammaformula = ~ 1, 
+                               epsilonformula = ~ area, 
+                               pformula = ~ area, 
+                               data = DO_data)
+summary(fit_colext)
+```
+
+::: notes
+In the Lepanthes orchid study, the most supported model showed that **extinction probability declines dramatically with patch area**, and **initial occupancy increases with both patch area and connectivity S**!
+:::
+
+## Projecting Metapopulation Dynamics
+
+We can project occupancy forward over 100 years based on our estimated colonization and extinction rates.
+
+```{r}
+#| echo: true
+colext_sim <- function(occ_init, col, ext, timeframe) {
+  Nsite <- length(occ_init)
+  occ_out <- matrix(NA, nrow = Nsite, ncol = timeframe)
+  # Step 1: Initial occupancy state
+  occ_out[, 1] <- rbinom(Nsite, size = 1, prob = occ_init)
+  # Step 2: Simulate transition
+  for(t in 2:timeframe) {
+    p_occ <- occ_out[, t-1] * (1 - ext) + (1 - occ_out[, t-1]) * col
+    occ_out[, t] <- rbinom(Nsite, size = 1, prob = p_occ)
+  }
+  return(occ_out)
+}
+# Project for 20 years with colonization = 0.05, extinction = 0.15
+proj <- colext_sim(occ_init = rep(0.3, 100), col = 0.05, ext = 0.15, timeframe = 20)
+cat("Average fraction of patches occupied over time:\n", colMeans(proj))
+```
+
+::: notes
+This live projection shows how the metapopulation approaches its equilibrium occupancy over time. We can use this to run PVAs and evaluate if a species will survive long-term under different landscape configurations.
+:::
+-->
+
+## When is the metapopulation approach appropriate?
+
+Hanski's three criteria:
+
+1.  space is **discrete** — patchy habitat
+2.  processes operate on both local population and metapopulation levels
+3.  habitat is **large and permanent enough** to allow local populations
+    to persist for at least a few generations
+
+::: notes
+Applications: long-term effects of deforestation (Ferraz et al. 2007),
+golden eagle occupancy dynamics (Martin et al. 2009), and Florida scrub
+lizard, where Hokit et al. (2001) found the IFM and a full population
+projection model gave broadly similar predicted distributions.
+
+Say this plainly: the metapopulation framework is not universal, and it
+was over-applied in the 1990s. Harrison (1991) surveyed real systems and
+found classic Levins-style metapopulations to be rare -- most were
+mainland-island or patchy populations.
+
+Criterion 3 is the one most often violated. If local populations blink
+out within a generation, you have a patchy population, not a
+metapopulation.
+
+Our orchid meets all three: discrete moss patches on boulders and trees,
+local and network dynamics, and patches persisting across years.
+:::
+
+## Source–sink dynamics
+
+$$N_t = N_{t-1}(B + I - D - E), \qquad \lambda_t = B + I - D - E$$
+
+|            | λ    | births vs deaths | emigration vs immigration |
+|------------|------|------------------|---------------------------|
+| **Source** | \> 1 | *B* \> *D*       | *E* \> *I*                |
+| **Sink**   | \< 1 | *B* \< *D*       | *E* \< *I*                |
+
+::: notes
+Four vital rates: births, immigration, deaths, emigration.
+
+Pulliam 1988 DEFINED sources and sinks using all four
+rates, then in the rest of the paper focused only on births and deaths,
+ignoring emigration and immigration. That shift "led to much confusion
+in spatial demography" (Runge et al. 2006).
+
+The confusion compounded when people started calling sources "net
+exporters" and sinks "net importers," which emphasizes only the E and I
+components -- the half Pulliam dropped.
+
+So when you read a source-sink paper, check which definition is in use.
+They are not equivalent.
+:::
+
+## Pseudo-sinks and sieves
+
+**Pseudo-sink**: a habitat that *appears* to be a sink but is simply
+**above carrying capacity**. As the local population falls back to *K*,
+it stops looking like a sink.
+
+**Sieve** (Cronin 2007): births exceed deaths, *but* emigration is so
+high the population may still go locally extinct.
+
+> Generalize to two axes: a **mobility** axis
+(regional vs local dynamics) and a **compensation** axis (exporting vs
+importing).
+
+::: notes
+Pseudo-sinks matter because they are an artefact of timing. Measure a
+population that has just been supplemented above K and you will see
+deaths exceeding births -- which looks like a sink and is not. Watkinson
+& Sutherland (1995) is the original.
+
+Sieves are the mirror-image failure of the "net exporter" framing: a
+sieve is a prolific net exporter that cannot sustain itself.
+
+The Thomas & Kunin two-axis version is the useful reframing: these are
+not four discrete categories but a CONTINUUM in two dimensions. Most
+real populations sit somewhere in the middle.
+:::
+
+## Source–sink dynamics implications
+
+1.  Individuals in **sinks** are outside the species' **fundamental
+    niche** 
+2.  Source–sink dynamics **complicate species interactions** — a habitat
+    that is a source for one species and a sink for another can look
+    like asymmetric competition
+3.  When sources occur, **classic metapopulation dynamics may be less
+    likely** — more like **island–mainland**
+4.  Central to **habitat prioritization**: practitioners may be
+    unwilling to invest in sinks
+
+::: notes
+Insight 1 Pulliam (2000): dispersal limitation means suitable places go
+unoccupied, AND sink dynamics mean unsuitable places are occupied. Both
+break the assumption that occurrence indicates suitability, which is the
+assumption every SDM makes.
+
+Insight 2 is a nice trap to point out. Two species, one habitat,
+opposite demographic outcomes, and the pattern looks like competitive
+exclusion. It isn't.
+
+Insight 4 is where it gets practically fraught. A sink can be worth
+protecting if it buffers the source, or if it becomes a source under
+changed conditions. Liu et al. (2011) on prioritization.
+:::
+
+## Balanced dispersal
+
+Sites vary in **carrying capacity**, but there are **no sinks** (McPeek
+& Holt 1992; Diffendorfer 1998).
+
+Dispersal rates are **inversely related** to local carrying capacity:
+high emigration from low-*K* sites, low emigration from high-*K* sites.
+
+So the number of individuals moving between patches becomes **balanced**
+— an extension of the **ideal free distribution** 
+
+::: notes
+This is the alternative to source-sink, and it explains the same
+observation -- net flows between patches -- without invoking sinks at
+all.
+
+The IFD connection is exact: under the IFD, individuals distribute so
+fitness is equalized, which means per-capita emigration is higher where
+crowding relative to K is higher. Doncaster et al. (1997) is the
+empirical support.
+
+Worth flagging because the two models make different conservation
+recommendations. Under source-sink, the low-quality patch is a drain.
+Under balanced dispersal, it is simply a smaller patch pulling its
+weight.
+:::
+
+# 2.1 Occupancy framework {.center}
+
+## Imperfect Detection 
+
+- **Raw Observations vs Latent Reality**:
+  - $y_{i,j,t} = 0$ can mean **True Absence** ($z_{i,t} = 0$) OR
+    **Non-Detection** ($z_{i,t} = 1, p < 1$).
+  - Naive raw proportion of occupied sites ($\hat{\psi}_{\text{naive}}$)
+    severely underestimates true occupancy.
+- **False Negative Probability**: $(1 - p)^J$, where $J$ is the number
+  of secondary visits.
+- **Biological Consequence**: Masking population declines, range
+  contractions, and extinction events.
+
+::: notes
+Emphasize that observed zero is ambiguous. Hierarchical models resolve
+this ambiguity by explicitly estimating p.
+:::
+
+## Static Occupancy Model Structure
+
+- **Process Sub-model**:
+  $$z_i \sim \text{Bernoulli}(\psi_i), \quad \text{logit}(\psi_i) = \mathbf{X}_i \boldsymbol{\beta}$$
+- **Observation Sub-model**:
+  $$y_{ij} | z_i \sim \text{Bernoulli}(z_i p_{ij}), \quad \text{logit}(p_{ij}) = \mathbf{W}_{ij} \boldsymbol{\alpha}$$
+- **Assumptions**:
+  1.  Closure: Occupancy state $z_i$ is constant across
+      $j = 1, \dots, J$ visits.
+  2.  Independence of detections conditional on $z_i$.
+  3.  No false positives ($P(y=1 | z=0) = 0$).
+
+::: notes
+Review static occupancy as the baseline building block before moving to
+dynamic multi-season extensions.
+:::
+
+## Dynamic Occupancy Formulation (MacKenzie et al. 2003)
+
+- **Initial State** ($t = 1$):
+  $$z_{i,1} \sim \text{Bernoulli}(\psi_{i,1})$$
+- **State Transitions** ($t > 1$):
+  $$z_{i,t} | z_{i,t-1} \sim \text{Bernoulli}\left( z_{i,t-1} \phi_{i,t-1} + (1 - z_{i,t-1}) \gamma_{i,t-1} \right)$$
+- **Parameters**:
+  - $\psi_1$: Initial occupancy probability
+  - $\phi_{i,t-1}$: Persistence probability ($1 - \epsilon_{i,t-1}$)
+  - $\gamma_{i,t-1}$: Colonization probability
+
+::: notes
+State space framing: The dynamic model parameterizes turnover through time using colonization gamma and persistence phi.
+
+Read the Markov equation as a switch, because that is exactly what it is.
+
+If z was 0 last year, the first term vanishes and z this year is
+Bernoulli with probability gamma -- colonization. If z was 1 last year,
+the second term vanishes and z this year is Bernoulli with probability
+phi = 1 - epsilon -- survival, i.e. not going extinct.
+
+One equation, two cases. That is the whole model.
+
+The observation layer is what separates this from a SPOM. MacKenzie et
+al. (2003) extended earlier colonization-extinction work (Erwin et al.
+1998; Clark & Rosenzweig 1994) by handling DETECTABILITY.
+:::
+
+## Transition Probability Matrix Formulation
+
+- State space $z_{i,t} \in \{0, 1\}$:
+  $$\mathbf{\Omega}_{i,t-1} = \begin{pmatrix} P(z_t=0|z_{t-1}=0) & P(z_t=1|z_{t-1}=0) \\ P(z_t=0|z_{t-1}=1) & P(z_t=1|z_{t-1}=1) \end{pmatrix} = \begin{pmatrix} 1 - \gamma_{i,t-1} & \gamma_{i,t-1} \\ 1 - \phi_{i,t-1} & \phi_{i,t-1} \end{pmatrix}$$
+- **Equilibrium Occupancy** ($\psi^*$):
+  $$\psi^* = \frac{\gamma}{\gamma + \epsilon} = \frac{\gamma}{\gamma + 1 - \phi}$$
+- **State Trajectory**: Represents a first-order Markov chain.
+
+::: notes
+Show the matrix representation. Note how equilibrium occupancy matches
+classic Levins metapopulation results.
+:::
+
+## Observation Process in Dynamic Occupancy
+
+- For primary period $t$ and secondary visit
+  $j \in \{1, \dots, J_{i,t}\}$:
+  $$y_{ijt} | z_{it} \sim \text{Bernoulli}(z_{it} p_{ijt})$$
+
+## Why this beats a SPOM
+
+Stochastic patch occupancy models have three limitations (Moilanen
+2002):
+
+1.  they require **all sites sampled**, otherwise colonization is
+    **over-estimated**
+2.  they assume **area is measured correctly** — errors flatten the
+    occupancy–area scaling
+3.  they assume **no observation error** — false negatives cause large
+    errors
+
+Dynamic occupancy models address the third directly.
+
+::: notes
+Limitation 3 is the one dynamic occupancy models fix, and it matters
+most because false negatives look exactly like extinctions. Miss a
+species one year and detect it the next, and a SPOM records an
+extinction followed by a colonization that never happened. Both rates
+are inflated.
+
+For our orchid, detection is high -- the book estimates p = 0.843 per
+survey, and with two surveys per year the annual detection probability
+is 1 - (1 - 0.843)\^2 = 0.98. So the correction is small HERE. For a
+cryptic species it would be the whole ballgame.
+
+The robust design -- primary periods open to colonization and
+extinction, secondary surveys within them assumed closed -- is what
+makes detection estimable (Pollock 1982). You need the repeat visits.
+:::
+
+# 3.1 Simulations
+## Simulate the orchid network
+![](images/orchid.jpg){width="40%"} 
+
+```{r}
+#| fig-width: 8.6
+#| fig-height: 6.4
+#| echo: true
+set.seed(1010)
+n_p <- 841                        # patches
+
+# patches scatter along a sinuous river channel, in metres
+tt <- sort(runif(n_p, 0, 1))
+rx <- 300 * tt + rnorm(n_p, 0, 6)
+ry <- -300 * tt + 40 * sin(8 * tt) + rnorm(n_p, 0, 6)
+rz <- 60 * tt + rnorm(n_p, 0, 2)          # elevation gradient along the river
+
+area <- round(rlnorm(n_p, log(35), 1.0), 1)     # moss area, cm2
+area <- pmin(area, 650)
+
+# 3-D distance
+dmat <- as.matrix(dist(cbind(rx, ry, rz)))
+
+meandist <- 4.8             # mean seed dispersal, m (Tremblay 1997)
+alpha <- 1 / meandist
+
+plot(rx, 
+     ry,
+     pch = 21,
+     bg = "grey85",
+     cex = log(area + 1) / 3,
+     xlab = "x (m)", 
+     ylab = "y (m)", 
+     asp = 1,
+     main = "841 moss patches along the river; symbol size ~ log(area)")
+c(patches = n_p,
+  mean_area = round(mean(area), 1),
+  max_area = max(area), 
+  alpha = round(alpha, 3))
+```
+
+
+::: notes
+Lepanthes rupestris is a small wind-dispersed orchid, leaves 1.3 to 4.3
+cm, flowers under 6 mm, that anchors its roots in moss patches on
+boulders (epilithic) or tree trunks (epiphytic) along streams in the
+Luquillo Mountains, Puerto Rico. Rocks tend to have larger populations
+and higher occupancy than trees.
+
+The sampling design is worth noting for its cleverness. 250 occupied
+patches were identified first, then unoccupied patches were found by
+randomly selecting three suitable moss-covered patches with no
+individuals within a 5 m radius of each occupied patch. That gives you
+unoccupied patches that are genuinely SUITABLE, which is what you need
+to estimate colonization.
+
+Note the THREE-DIMENSIONAL distance. The patches sit along a steep
+elevation gradient, and dist() takes x, y and z without complaint. Most
+connectivity work ignores the vertical dimension; along a mountain
+stream that is a real omission.
+
+Mean seed dispersal is 4.8 m, so alpha is about 0.21 -- a severely
+dispersal- limited organism, which is exactly why the metapopulation
+framing fits.
+:::
+
+## Simulate occupancy dynamics
+
+```{r}
+#| echo: true
+# TRUTH
+b_psi   <- c(int = -2.899, area = 0.562, S = 0.185)
+b_eps   <- c(int = -1.21,  area = -0.62)
+logit_g <- -4.14                       # colonization, constant
+p_det   <- 0.843                       # per-survey detection
+
+n_prim <- 5; n_sec <- 2
+logarea <- log(area + 1)
+
+# connectivity S_i, ignoring occupancy 
+gker <- exp(-alpha * dmat); diag(gker) <- 0
+S <- as.vector(gker %*% area)
+Sz <- as.numeric(scale(S))             # centres and scales S
+
+psi1 <- plogis(b_psi["int"] + b_psi["area"] * logarea + b_psi["S"] * Sz)
+eps  <- plogis(b_eps["int"] + b_eps["area"] * logarea)
+gam  <- plogis(logit_g)
+
+set.seed(1011)
+z <- matrix(NA_integer_, n_p, n_prim)
+z[, 1] <- rbinom(n_p, 1, psi1)
+for (t in 2:n_prim) {
+  pr <- z[, t - 1] * (1 - eps) + (1 - z[, t - 1]) * gam
+  z[, t] <- rbinom(n_p, 1, pr)
+}
+
+# observation: two secondary surveys per primary period
+y <- matrix(NA_integer_, n_p, n_prim * n_sec)
+for (t in 1:n_prim) for (j in 1:n_sec) {
+  y[, (t - 1) * n_sec + j] <- rbinom(n_p, 1, z[, t] * p_det)
+}
+
+# Counts as well as occupancy: holds abundance N, and
+# the synchrony analysis needs a series with variance. A purely binary series
+# from a patch that never changes state has sd = 0.
+lamN <- exp(0.4 + 0.35 * logarea)          # expected count when occupied
+N <- matrix(0L, n_p, n_prim)
+for (t in 1:n_prim) N[, t] <- as.integer(z[, t] * rpois(n_p, lamN))
+
+c(ever_occupied_true = sum(rowSums(z) > 0),
+  ever_detected = sum(rowSums(y) > 0),
+  detections = sum(y), non_detections = sum(y == 0),
+  detection_rate = round(mean(y), 3),
+  psi_star_expected = round(mean(gam / (gam + eps)), 3),
+  mean_count_when_occupied = round(mean(N[z == 1]), 1))
+```
+
+::: notes
+Everything here is generated from the book's own estimates, so Lab D can
+be scored against a known truth.
+
+Check the printed numbers against theirs. They report 1969 detections
+and 6641 non-detections, a detection rate of 0.229, 266 patches ever
+occupied, and an equilibrium psi\* of 0.31. Ours should be in the same
+neighbourhood.
+
+Two things worth pointing at in the loop. The transition line
+
+pr \<- z\[, t-1\] \* (1 - eps) + (1 - z\[, t-1\]) \* gam
+
+IS equation 10.19 -- the switch we discussed. And note
+EVER_OCCUPIED_TRUE versus EVER_DETECTED: the gap is the patches that
+were occupied and never detected. With p = 0.843 and ten surveys that
+gap should be tiny, which is why the book's detection correction changes
+little here.
+
+Note also colonization is CONSTANT while extinction depends on area.
+That is the book's best-supported model, and it means the area-isolation
+paradigm only half holds in this system -- area drives extinction,
+isolation does not measurably drive colonization.
+:::
+
+
+```{r}
+site_cov <- data.frame(logarea = logarea, Sz = Sz)
+
+# a survey-level covariate: day of year, standardised
+set.seed(1012)
+date_mat <- matrix(scale(as.vector(
+  outer(rep(1, n_p), rep(c(40, 210), n_prim)) + rnorm(n_p * n_prim * n_sec, 0, 8)
+))[, 1], n_p, n_prim * n_sec)
+
+# implicit-dynamics frame: stack primary periods as if independent
+y_stack   <- do.call(rbind, lapply(1:n_prim,
+                     function(t) y[, (t - 1) * n_sec + 1:n_sec]))
+cov_stack <- do.call(rbind, replicate(n_prim, site_cov, simplify = FALSE))
+dat_stack <- do.call(rbind, lapply(1:n_prim,
+                     function(t) date_mat[, (t - 1) * n_sec + 1:n_sec]))
+
+umf_occ <- unmarkedFrameOccu(y = y_stack, siteCovs = cov_stack,
+                             obsCovs = list(date = dat_stack))
+
+# dynamic frame: all 10 surveys, 5 primary periods
+umf_dyn <- unmarkedMultFrame(y = y, siteCovs = site_cov,
+                             obsCovs = list(date = date_mat),
+                             numPrimary = n_prim)
+c(stacked_rows = nrow(y_stack), dynamic_sites = numSites(umf_dyn))
+```
+
+::: notes
+Two frames because we fit two kinds of model.
+
+The IMPLICIT-DYNAMICS frame stacks the five primary periods on top of
+each other and treats them as independent sites. That estimates AVERAGE
+occupancy over time and ignores colonization and extinction entirely.
+The book does this first and is explicit about the compromise: this is
+repeated measures treated as independent samples, and unmarked cannot
+easily fit random effects, so proceed with caution. Bayesian approaches
+handle it properly (Rota et al. 2011).
+
+The DYNAMIC frame keeps the structure: 841 sites, 10 surveys, 5 primary
+periods. numPrimary is what tells unmarked where the primary boundaries
+are.
+
+On reshaping: real data arrive long, and you would reshape with
+reshape2::dcast or base R. The base equivalent is one line --
+xtabs(presence \~ siteID + survey_number, data = surveys) -- which is
+worth knowing since reshape2 is superseded.
+:::
+
+
+# 3.2 Fit occupancy models
+## First, ignore the dynamics
+
+```{r}
+#| message: false
+#| echo: true
+m_p_null <- occu(~ 1 ~ 1, umf_occ)
+m_p_date <- occu(~ date ~ 1, umf_occ)
+m_p_both <- occu(~ date + logarea ~ 1, umf_occ)
+
+modSel(fitList(fits = list("p(.)" = m_p_null, 
+                           "p(date)" = m_p_date,
+                           "p(date+area)" = m_p_both)))
+```
+
+::: notes
+The implicit-dynamics approach: estimate AVERAGE occupancy over the five
+years and ignore colonization and extinction.
+
+The formula syntax is unmarked's and catches people out: the FIRST tilde
+is the DETECTION model, the SECOND is occupancy. So `occu(~ date ~ 1)`
+means detection varies with date, occupancy is constant.
+
+We fit the detection model first, holding occupancy constant, which is
+the book's sequence. Note fitList(fits = list(...)) rather than
+fitList("name" = model, ...) -- both work, but the explicit form is
+unambiguous.
+
+Our simulation has CONSTANT detection, so date and area should NOT
+improve the model. The book's real data strongly supported both. That
+difference is honest: their detection genuinely varied, ours does not by
+construction.
+:::
+
+## Now add area and isolation
+
+```{r}
+#| echo: true
+
+m_area   <- occu(~ date + logarea ~ logarea, umf_occ)
+m_S      <- occu(~ date + logarea ~ Sz, umf_occ)
+m_areaS  <- occu(~ date + logarea ~ logarea + Sz, umf_occ)
+
+modSel(fitList(fits = list("psi(.)" = m_p_both,
+                           "psi(area)" = m_area,
+                           "psi(S)" = m_S, 
+                           "psi(area+S)" = m_areaS)))
+round(coef(m_areaS), 3)
+```
+
+::: notes
+Now covariates on occupancy. The book's most-supported model is area +
+S, with both effects positive: as patch area and connectivity increase,
+occupancy increases. Their estimates are intercept -2.899, area 0.562, S
+0.185, and the z-value for area is much larger, so the area effect is
+stronger.
+
+Compare our estimates to those numbers -- they are the truth we
+simulated from.
+
+One subtle point the book makes well, and it is worth repeating. When
+they fitted detection alone, patch area appeared to strongly affect
+DETECTABILITY. Once area was also in the occupancy model, the detection
+effect shrank a lot. Their explanation: covariate effects on detection
+and occupancy are not formally confounded, but the model does use shared
+information during estimation. So be careful interpreting a covariate
+that plausibly affects both.
+
+Ours will show this less dramatically, because we simulated constant
+detection.
+:::
+
+## Colonization and extinction, explicitly
+
+```{r}
+#| message: false
+#| echo: true
+
+m_dyn_null <- colext(psiformula = ~ 1,
+                     gammaformula = ~ 1,
+                     epsilonformula = ~ 1,
+                     pformula = ~ 1, 
+                     data = umf_dyn)
+
+m_dyn_psi  <- colext(psiformula = ~ logarea + Sz,
+                     gammaformula = ~ 1,
+                     epsilonformula = ~ 1, 
+                     pformula = ~ 1,
+                     data = umf_dyn)
+
+m_dyn_eps  <- colext(psiformula = ~ logarea + Sz,
+                     gammaformula = ~ 1,
+                     epsilonformula = ~ logarea, 
+                     pformula = ~ 1,
+                     data = umf_dyn)
+
+m_dyn_full <- colext(psiformula = ~ logarea + Sz,
+                     gammaformula = ~ Sz,
+                     epsilonformula = ~ logarea,
+                     pformula = ~ 1,
+                     data = umf_dyn)
+
+modSel(fitList(fits = list("null" = m_dyn_null,
+                           "psi(area+S)" = m_dyn_psi,
+                           "psi(area+S) eps(area)" = m_dyn_eps,
+                           "+ gamma(S)"           = m_dyn_full)))
+```
+
+::: notes
+Four models of increasing complexity. Note colext() takes FOUR formulas:
+initial occupancy, colonization (gamma), extinction (epsilon), and
+detection.
+
+The book's model ranking puts psi(area+S) with eps(area) on top, with
+gamma(S) adding nothing -- delta AIC of 1.6, so within noise. Their
+conclusion: patch area has a strong NEGATIVE effect on extinction, and
+connectivity S is NOT a strong predictor of colonization.
+
+That is a partial failure of the area-isolation paradigm in this system,
+and it is worth dwelling on. Area does what the theory says. Isolation
+does not. The book is straightforward about it rather than reaching for
+an explanation.
+
+Our simulation has constant colonization by construction, so the
+gamma(S) model should also add nothing. Good -- that means the model
+selection is behaving.
+
+colext() is the slowest thing in this deck: it evaluates a two-state
+hidden Markov likelihood over 841 sites and 5 periods for every optim
+step.
+:::
+
+## Did it recover the truth?
+
+```{r}
+#| echo: true
+est <- coef(m_dyn_eps)
+
+# coef() for a colext fit returns psi, then col, then ext, then det. This
+# vector is in that order -- READ THE PRINTED NAMES to confirm rather than
+# trusting the order, and the stopifnot catches a length mismatch.
+truth_vec <- c(b_psi[["int"]], 
+               b_psi[["area"]],
+               b_psi[["S"]],   # psi
+               logit_g,          # col
+               b_eps[["int"]], 
+               b_eps[["area"]],  # ext
+               qlogis(p_det))     # det
+stopifnot(length(est) == length(truth_vec))
+
+data.frame(parameter  = names(est),
+           estimate   = round(as.numeric(est), 3),
+           truth      = round(truth_vec, 3),
+           difference = round(as.numeric(est) - truth_vec, 3))
+
+round(c(gamma = backTransform(m_dyn_eps, type = "col")@estimate,
+        p     = backTransform(m_dyn_eps, type = "det")@estimate), 4)
+```
+
+::: notes
+Seven parameters, side by side with the values that generated the data.
+
+Expect the psi and extinction coefficients to be close. The colonization
+intercept may be noisier, because colonization events are rare -- gamma
+is about 0.016, so across 841 patches and four transitions you observe
+relatively few. Rare events, wide confidence intervals.
+
+backTransform() converts from the logit scale to probabilities. Compare
+gamma to 0.016 and p to 0.843.
+
+Note the order of coef() output: initial occupancy, then colonization,
+then extinction, then detection. If the truth vector and the estimate
+vector were misaligned the differences would be nonsense, so read the
+parameter names, do not trust the order.
+:::
+
+## Partial predictions
+
+```{r}
+#| echo: true
+#| fig-width: 12.5
+#| fig-height: 4.8
+ar_seq <- seq(min(logarea), max(logarea), length.out = 60)
+S_seq  <- seq(min(Sz), max(Sz), length.out = 60)
+
+nd_area <- data.frame(logarea = ar_seq, Sz = mean(Sz))
+nd_S    <- data.frame(logarea = mean(logarea), Sz = S_seq)
+
+# NOTE: predict(object, type, newdata) -- name BOTH, the 2nd positional is type
+pr_psi_a <- predict(m_dyn_eps, type = "psi", newdata = nd_area)
+pr_psi_S <- predict(m_dyn_eps, type = "psi", newdata = nd_S)
+pr_ext_a <- predict(m_dyn_eps, type = "ext", newdata = nd_area)
+
+band <- function(x, p, xlab, ylab, main, truth = NULL) {
+  plot(x, p$Predicted, type = "l", lwd = 3, ylim = c(0, 1),
+       xlab = xlab, ylab = ylab, main = main)
+  lines(x, p$lower, lty = 2); lines(x, p$upper, lty = 2)
+  if (!is.null(truth)) lines(x, truth, col = "firebrick", lwd = 2.4, lty = 3)
+}
+
+op <- par(mfrow = c(1, 3), mar = c(4.4, 4.6, 3, 1))
+band(exp(ar_seq) - 1, pr_psi_a, "patch area (cm2)", "initial occupancy",
+     "psi vs area",
+     plogis(b_psi["int"] + b_psi["area"] * ar_seq + b_psi["S"] * mean(Sz)))
+band(S_seq, pr_psi_S, "connectivity S (scaled)", "", "psi vs S",
+     plogis(b_psi["int"] + b_psi["area"] * mean(logarea) + b_psi["S"] * S_seq))
+band(exp(ar_seq) - 1, pr_ext_a, "patch area (cm2)", "extinction",
+     "extinction vs area",
+     plogis(b_eps["int"] + b_eps["area"] * ar_seq))
+par(op)
+```
+
+::: notes
+extinction probability falls steeply with patch area. That is the area
+half of the area-isolation paradigm, and it is well supported.
+
+The book's summary of the comparison between the implicit and dynamic
+models is worth repeating: the area effect on average occupancy was
+driven PARTLY by extinction dynamics, and since area also explains
+occupancy at time 1, dynamics before the surveys began -- before 2000 --
+presumably contributed too.
+
+That is a nice illustration of a general point. A snapshot of occupancy
+encodes the accumulated history of colonization and extinction, and you
+cannot separate them without time series.
+:::
+
+# 3.3 Project forward {.center}
+
+## Project the fitted dynamics
+
+```{r}
+#| echo: true
+#| fig-width: 9.5
+#| fig-height: 5.4
+nd_fit  <- data.frame(logarea = logarea, Sz = Sz)
+psi_hat <- predict(m_dyn_eps, type = "psi", newdata = nd_fit)$Predicted
+col_hat <- predict(m_dyn_eps, type = "col", newdata = nd_fit)$Predicted
+ext_hat <- predict(m_dyn_eps, type = "ext", newdata = nd_fit)$Predicted
+
+colext_sim <- function(psi0, col, ext, timeframe, reps) {
+  ns <- length(psi0)
+  out <- array(NA_integer_, dim = c(reps, ns, timeframe))
+  out[, , 1] <- rbinom(reps * ns, 1, rep(psi0, each = reps))
+  for (t in 2:timeframe) {
+    prev <- out[, , t - 1]
+    pr <- prev * (1 - rep(ext, each = reps)) +
+          (1 - prev) * rep(col, each = reps)
+    out[, , t] <- rbinom(reps * ns, 1, pr)
+  }
+  out
+}
+
+set.seed(1013)
+proj <- colext_sim(psi_hat, col_hat, ext_hat, timeframe = 100, reps = 20)
+land_mean <- apply(proj, c(1, 3), mean)          # reps x time
+
+psi_star <- mean(col_hat / (col_hat + ext_hat))
+
+op <- par(mar = c(4.4, 4.6, 3, 1))
+matplot(t(land_mean), type = "l", lty = 1, col = rgb(0, 0, 0, 0.25),
+        ylim = c(0, 0.6), xlab = "time step",
+        ylab = "proportion of patches occupied",
+        main = "100-year projection, 20 realizations")
+lines(colMeans(land_mean), lwd = 3, col = "steelblue")
+abline(h = psi_star, lwd = 2.5, lty = 2, col = "firebrick")
+text(80, psi_star + 0.03, expression(psi^"*"), col = "firebrick", cex = 1.3)
+par(op)
+round(c(psi_star = psi_star, projected_end = mean(land_mean[, 100])), 3)
+```
+
+::: notes
+Twenty realizations of a 100-year projection, using patch-specific
+colonization and extinction from the fitted model. Red dashed line is
+the predicted equilibrium.
+
+Now the apparent paradox the book raises, and it is the best teaching
+moment in the chapter. Estimated extinction rates are HIGHER than
+colonization rates -- gamma \< epsilon -- and yet the projection is
+stable or rising. But the Levins model said persistence requires c \> e.
+What gives?
+
+Two reasons, and the second is the important one.
+
+First, rates vary by patch, whereas Levins assumes they do not.
+
+Second, and crucially, THE PARAMETERS ARE NOT THE SAME QUANTITY. In the
+Levins model, c is the rate of individuals EMIGRATING from occupied
+patches. In a dynamic occupancy model, gamma is the PROBABILITY THAT AN
+EMPTY PATCH BECOMES COLONIZED in one primary period. Different units,
+different meanings. Comparing them is a category error.
+
+The right equilibrium for this model is psi\* = gamma / (gamma +
+epsilon), and the projection should converge on it. Check the two
+printed numbers.
+
+Caveat the book flags: this projection ignores parameter uncertainty.
+Propagating it properly needs a Bayesian treatment (Chandler et al.
+2015).
+:::
+
+## Implicit vs explicit space
+
+```{r, echo = F, include = T}
+# IMPLICIT: Only neighbourhood relations exist.
+lattice <- matrix(0, nrow = 6, ncol = 6)
+lattice[3, 3] <- 1
+image(1:6, 
+      1:6,
+      lattice, 
+      col = c("grey92", "firebrick"),
+      xlab = "column (j)", 
+      ylab = "row (i)",
+      main = "Implicit: who is adjacent to whom?")
+
+# Which cells are neighbours of (3,3)? Rook's case:
+neighbours <- rbind(c(2,3), c(4,3), c(3,2), c(3,4))
+print(neighbours)
+```
+
+::: notes
+Connect straight back to Figure 1.3. In the implicit representation,
+"distance" between (3,3) and (5,5) is a count of steps, not a
+measurement. The model has no access to metres.
+
+Ask what happens if cells are unequal in size or shape — the implicit
+representation quietly breaks, which is one motivation for going
+explicit.
+:::
+
+## Implicit space {#ex4}
+
+In a grid, neighbours are defined by **topology**, not distance. Find
+the four rook neighbours of cell (3, 3) on a 6 × 6 grid.
+
+```{r, echo = F, include = T}
+i <- 3; j <- 3; n <- 6
+
+nb <- rbind(c(i - 1, j), c(i + 1, j), c(i, j - 1), c(i, j + 1))
+colnames(nb) <- c("row", "col")
+
+## Drop any neighbour that falls off the 6 x 6 grid
+inside <- nb[, "row"] >= 1 & nb[, "row"] <= n &
+          nb[, "col"] >= 1 & nb[, "col"] <= n
+nb[inside, ]
+```
+
+:::: {.hint exercise="ex4"}
+::: {.callout-note collapse="true"}
+The grid is `n` cells wide as well as `n` cells tall. The blank should
+hold the same object used two lines above for the row check.
+:::
+::::
+
+:::: {.solution exercise="ex4"}
+::: {.callout-tip collapse="true"}
+```{r, echo = F, include = T}
+i <- 3; j <- 3; n <- 6
+nb <- rbind(c(i - 1, j), c(i + 1, j), c(i, j - 1), c(i, j + 1))
+colnames(nb) <- c("row", "col")
+inside <- nb[, "row"] >= 1 & nb[, "row"] <= n &
+          nb[, "col"] >= 1 & nb[, "col"] <= n
+nb[inside, ]
+
+## A corner cell has only two neighbours 
+i <- 1; j <- 1
+nb2 <- rbind(c(i - 1, j), c(i + 1, j), c(i, j - 1), c(i, j + 1))
+nb2[nb2[, 1] >= 1 & nb2[, 1] <= n & nb2[, 2] >= 1 & nb2[, 2] <= n, ]
+```
+:::
+::::
+
+::: notes
+The second half of the solution is the part worth showing on the
+projector. A corner cell has two neighbours, an edge cell three, an
+interior cell four.
+
+That is edge effect, and it is not a nuisance to be programmed around —
+it is a real property of finite landscapes with real ecological
+consequences. Every neutral landscape model in Chapter 3 has to decide
+what to do about it.
+:::
+
+## Explicit space and real distances
+
+```{r, echo = F, include = T}
+# EXPLICIT: patches with coordinates and areas
+patches <- data.frame(
+  id   = c("A", "B", "C", "D", "E"),
+  x    = c(1.0, 3.4, 2.2, 4.6, 1.6),
+  y    = c(1.2, 1.0, 3.1, 2.9, 4.0),
+  area = c(12, 40, 6, 25, 9)
+)
+
+# Full pairwise Euclidean distance matrix
+d <- dist(patches[, c("x", "y")])
+round(as.matrix(d), 2)
+```
+
+::: exercise
+Which two patches are closest? Which is most isolated on average? Try
+`rowMeans(as.matrix(d))`.
+:::
+
+::: notes
+Which pair is closest? m \<- as.matrix(d); diag(m) \<- NA which(m ==
+min(m, na.rm = TRUE), arr.ind = TRUE)
+
+This tiny distance matrix is the seed of an enormous amount of later
+material: it's the input to metapopulation connectivity metrics in
+Chapter 10, and to patch-graph analysis in Chapter 9.
+
+Flag the assumption now: Euclidean distance treats the intervening
+landscape as uniform. Chapter 9 replaces it with effective or resistance
+distance. Zeller et al. (2012), one of the Chapter 9 readings, is about
+how badly we usually estimate that resistance.
+:::
+
+## Optional stretch
+
+::: exercise
+1.  Modify the arrangement simulation so high abundance clusters in the
+    **centre** rather than the east. Does `cor(x, abundance)` still
+    detect it? Why not?
+2.  Add a sixth patch to `patches` and recompute the distance matrix.
+3.  Change `lambda` in `rpois()` and note that arrangement and marginal
+    distribution are independent knobs.
+:::
