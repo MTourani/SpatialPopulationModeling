@@ -1999,42 +1999,42 @@
     "href": "Week2-SpatialPatterns.html#check-your-environment",
     "title": "WILD 591 – Spatial Population Modeling",
     "section": "Check your environment",
-    "text": "Check your environment\nNow confirm plotting works:\n\nTrivial on purpose. The goal is that every student sees output in the first two minutes, which massively reduces help-desk traffic later.\nThe version string printed above is whichever R Quarto used to render, which is worth checking against what your students will be running."
+    "text": "Check your environment\nNow confirm plotting works:\n\nplot(1:10,\n     (1:10) ^ 2,\n     pch = 19,\n     col = \"steelblue\",\n     xlab = \"x\", \n     ylab = \"x squared\",\n     main = \"If you can see this, you're set\")\n\n\nTrivial on purpose. The goal is that every student sees output in the first two minutes, which massively reduces help-desk traffic later.\nThe version string printed above is whichever R Quarto used to render, which is worth checking against what your students will be running."
   },
   {
     "objectID": "Week2-SpatialPatterns.html#locations-are-data-too",
     "href": "Week2-SpatialPatterns.html#locations-are-data-too",
     "title": "WILD 591 – Spatial Population Modeling",
     "section": "Locations are data too",
-    "text": "Locations are data too\nSame abundance values, two different spatial arrangements:\n\nThe punchline: the histogram, mean, variance, and every non-spatial summary of pop are IDENTICAL between panels. Only the arrangement differs.\nAsk: which panel would a standard GLM of pop on an eastness covariate treat differently? Both give the same answer if you ignore location. That is exactly the failure the course addresses.\nHave them run summary(pop) to confirm the marginal distribution is untouched."
+    "text": "Locations are data too\nSame abundance values, two different spatial arrangements:\n\nset.seed(42)\nn &lt;- 100\npop &lt;- rpois(n, lambda = 8)\n\n# Arrangement A: locations assigned at random\nxa &lt;- runif(n, 0, 10)\nya &lt;- runif(n, 0, 10)\n\n# Arrangement B: high counts placed toward the east\nxb &lt;- numeric(n)\nxb[order(pop)] &lt;- sort(runif(n, 0, 10))\nyb &lt;- runif(n, 0, 10)\n\npar(mfrow = c(1, 2), mar = c(4, 4, 3, 1))\nplot(xa, \n     ya,\n     cex = pop / 4, \n     pch = 19,\n     col = \"grey40\",\n     main = \"A: random arrangement\", \n     xlab = \"Easting\",\n     ylab = \"Northing\")\nplot(xb,\n     yb, \n     cex = pop / 4, \n     pch = 19,\n     col = \"firebrick\",\n     main = \"B: structured arrangement\",\n     xlab = \"Easting\",\n     ylab = \"Northing\")\n\n\nThe punchline: the histogram, mean, variance, and every non-spatial summary of pop are IDENTICAL between panels. Only the arrangement differs.\nAsk: which panel would a standard GLM of pop on an eastness covariate treat differently? Both give the same answer if you ignore location. That is exactly the failure the course addresses.\nHave them run summary(pop) to confirm the marginal distribution is untouched."
   },
   {
     "objectID": "Week2-SpatialPatterns.html#quantifying-the-difference",
     "href": "Week2-SpatialPatterns.html#quantifying-the-difference",
     "title": "WILD 591 – Spatial Population Modeling",
     "section": "Quantifying the difference",
-    "text": "Quantifying the difference\nFor a crude first look, let’s correlate the value with its coordinate:\n\nBefore looking at the second number, guess its sign and rough magnitude from the two maps on the previous slide. Then check yourself.\n\n\nAnswers: roughly zero for the random arrangement, strongly positive for the structured one. Both print above.\nThis only detects a monotonic east–west gradient. It would completely miss patchiness, periodicity, or any pattern without a directional trend. That inadequacy is precisely why correlograms and variograms exist."
+    "text": "Quantifying the difference\nFor a crude first look, let’s correlate the value with its coordinate:\n\ncor(xa, pop)   # random arrangement\ncor(xb, pop)   # structured arrangement\n\n\nBefore looking at the second number, guess its sign and rough magnitude from the two maps on the previous slide. Then check yourself.\n\n\nAnswers: roughly zero for the random arrangement, strongly positive for the structured one. Both print above.\nThis only detects a monotonic east–west gradient. It would completely miss patchiness, periodicity, or any pattern without a directional trend. That inadequacy is precisely why correlograms and variograms exist."
   },
   {
     "objectID": "Week2-SpatialPatterns.html#simulate-sa-env",
     "href": "Week2-SpatialPatterns.html#simulate-sa-env",
     "title": "WILD 591 – Spatial Population Modeling",
     "section": "Simulate SA-env",
-    "text": "Simulate SA-env\nThe environment is autocorrelated before any organism responds. Here, we build an spatially autocorrelated environment.\n\nWhat are the outputs of this code chunk?\n\n\nset.seed(42) — pins the random number generator’s state. Every subsequent rnorm() draw becomes reproducible, so you, your students, and the rendered slide all get the identical landscape.\nn &lt;- 40 — the side length of a square grid. You get 40 × 40 = 1,600 cells: big enough to show structure, small enough that R’s nested loops below finish instantly.\nnoise &lt;- matrix(rnorm(n * n), n, n) — 1,600 independent draws from a standard normal, poured into a 40 × 40 matrix (column-wise\nsmooth_field &lt;- function(m, w) — m is the input matrix; w is the neighborhood radius in cells. The window is square, so an interior cell averages a (2w+1) × (2w+1) block. w = 2 gives a 5 × 5 window, 25 cells.\nout &lt;- m — preallocates the result with the right dimensions and storage mode.\nfor (i in seq_len(nrow(m))) — rows. seq_len() rather than 1:nrow(m) is deliberate defensive style: on a zero-row matrix, 1:0 returns c(1, 0) and the loop runs anyway, while seq_len(0) correctly returns nothing."
+    "text": "Simulate SA-env\nThe environment is autocorrelated before any organism responds. Here, we build an spatially autocorrelated environment.\n\nset.seed(42)\nn &lt;- 40\nnoise &lt;- matrix(rnorm(n * n), n, n)\nsmooth_field &lt;- function(m, w) {\n  out &lt;- m\n  for (i in seq_len(nrow(m))) {\n    for (j in seq_len(ncol(m))) {\n      ri &lt;- max(1, i - w) : min(nrow(m), i + w)\n      rj &lt;- max(1, j - w) : min(ncol(m), j + w)\n      out[i, j] &lt;- mean(m[ri, rj])\n    } #j\n  } #i\n  out\n  }\n\n\nWhat are the outputs of this code chunk?\n\n\nset.seed(42) — pins the random number generator’s state. Every subsequent rnorm() draw becomes reproducible, so you, your students, and the rendered slide all get the identical landscape.\nn &lt;- 40 — the side length of a square grid. You get 40 × 40 = 1,600 cells: big enough to show structure, small enough that R’s nested loops below finish instantly.\nnoise &lt;- matrix(rnorm(n * n), n, n) — 1,600 independent draws from a standard normal, poured into a 40 × 40 matrix (column-wise\nsmooth_field &lt;- function(m, w) — m is the input matrix; w is the neighborhood radius in cells. The window is square, so an interior cell averages a (2w+1) × (2w+1) block. w = 2 gives a 5 × 5 window, 25 cells.\nout &lt;- m — preallocates the result with the right dimensions and storage mode.\nfor (i in seq_len(nrow(m))) — rows. seq_len() rather than 1:nrow(m) is deliberate defensive style: on a zero-row matrix, 1:0 returns c(1, 0) and the loop runs anyway, while seq_len(0) correctly returns nothing."
   },
   {
     "objectID": "Week2-SpatialPatterns.html#range-of-autocorrelation",
     "href": "Week2-SpatialPatterns.html#range-of-autocorrelation",
     "title": "WILD 591 – Spatial Population Modeling",
     "section": "Range of autocorrelation",
-    "text": "Range of autocorrelation\nTry with different range of autocorrelation: w = 4 first, and then re-run with w = 1 and w = 10.\n\n\n\n\n\n\n\nNote\n\n\nAny positive whole number works. Start with 4, then change it and re-run — the point of the exercise is the comparison, not the single value.\n\n\n\n\n\n\n\n\n\n\n\nTip\n\n\n\n\n\n\n\n\nInsist that students re-run with at least two values of w. The single most important idea in Chapter 5 is that autocorrelation has a range — a distance beyond which it decays — and w is that range made tangible.\nColour note: hcl.colors() with “YlGnBu” is perceptually uniform and colourblind-safe, which is why it is used here rather than rainbow(). Say so. Students copy whatever palette they first see for the rest of their careers."
+    "text": "Range of autocorrelation\nTry with different range of autocorrelation: w = 4 first, and then re-run with w = 1 and w = 10.\n\n## w is the smoothing half-width: the range of autocorrelation.\nenv &lt;- smooth_field(noise, w = 4)\nop &lt;- par(mfrow = c(1, 2), mar = c(1, 1, 3, 1))\nimage(noise,\n      col = hcl.colors(24, \"YlGnBu\"),\n      asp = 1, \n      axes = FALSE,\n      main = \"No autocorrelation\", \n      col.main = \"#70002E\")\nimage(env, \n      col = hcl.colors(24, \"YlGnBu\"),\n      asp = 1,\n      axes = FALSE,\n      main = \"SA-env\", \n      col.main = \"#70002E\")\npar(op)\n\n\n\n\n\n\n\n\nNote\n\n\nAny positive whole number works. Start with 4, then change it and re-run — the point of the exercise is the comparison, not the single value.\n\n\n\n\n\n\n\n\n\n\n\nTip\n\n\n\nset.seed(42); n &lt;- 40\nnoise &lt;- matrix(rnorm(n * n), n, n)\nsmooth_field &lt;- function(m, w) {\n  out &lt;- m\n  for (i in seq_len(nrow(m))) {\n    for (j in seq_len(ncol(m))) {\n      ri &lt;- max(1, i - w) : min(nrow(m), i + w)\n      rj &lt;- max(1, j - w) : min(ncol(m), j + w)\n      out[i, j] &lt;- mean(m[ri, rj])\n    }\n  }\n  out\n  }\nop &lt;- par(mfrow = c(1, 3), mar = c(1, 1, 3, 1))\nfor (w in c(1, 4, 10)) {\n  image(smooth_field(noise, w),\n        col = hcl.colors(24, \"YlGnBu\"),\n        asp = 1,\n        axes = FALSE,\n        main = paste(\"w =\", w),\n        col.main = \"#70002E\")\n}\n\npar(op)\n\n\n\n\n\n\nInsist that students re-run with at least two values of w. The single most important idea in Chapter 5 is that autocorrelation has a range — a distance beyond which it decays — and w is that range made tangible.\nColour note: hcl.colors() with “YlGnBu” is perceptually uniform and colourblind-safe, which is why it is used here rather than rainbow(). Say so. Students copy whatever palette they first see for the rest of their careers."
   },
   {
     "objectID": "Week2-SpatialPatterns.html#autocorrelated-environmentspecies",
     "href": "Week2-SpatialPatterns.html#autocorrelated-environmentspecies",
     "title": "WILD 591 – Spatial Population Modeling",
     "section": "Autocorrelated environment/species",
-    "text": "Autocorrelated environment/species\nEnvironment could be spatially structured (SA-env) and species clusters for endogenous reasons (SA-sp)."
+    "text": "Autocorrelated environment/species\nEnvironment could be spatially structured (SA-env) and species clusters for endogenous reasons (SA-sp).\n\nset.seed(7)\nn &lt;- 40\nsmooth_field &lt;- function(m, w) {\n  out &lt;- m\n  for (i in seq_len(nrow(m))) {\n    for (j in seq_len(ncol(m))) {\n      ri &lt;- max(1, i - w) : min(nrow(m), i + w)\n      rj &lt;- max(1, j - w) : min(ncol(m), j + w)\n      out[i, j] &lt;- mean(m[ri, rj])\n    }\n  }\n  out\n  }\nenv    &lt;- smooth_field(matrix(rnorm(n * n), n, n), w = 5)\nclump  &lt;- smooth_field(matrix(rnorm(n * n), n, n), w = 3)"
   },
   {
     "objectID": "Week2-SpatialPatterns.html#model-schematic",
@@ -2118,126 +2118,126 @@
     "href": "Week2-SpatialPatterns.html#simulate-the-camera-array",
     "title": "WILD 591 – Spatial Population Modeling",
     "section": "Simulate the camera array",
-    "text": "Simulate the camera array"
+    "text": "Simulate the camera array\n\nrm(list = ls())\nset.seed(541)\n\nn_array &lt;- 12                       # camera arrays\nn_cam   &lt;- 6                        # deployments per array\nn       &lt;- n_array * n_cam\n\n# Array centres scattered across a 20 x 20 km landscape\nax &lt;- runif(n_array, 1, 19)\nay &lt;- runif(n_array, 1, 19)\n\n# Deployments sit within ~300 m of their array centre\ngrp &lt;- rep(seq_len(n_array), each = n_cam)\nx   &lt;- ax[grp] + rnorm(n, 0, 0.3)\ny   &lt;- ay[grp] + rnorm(n, 0, 0.3)\n\n# Canopy cover varies both among arrays and among deployments within an array\ncanopy &lt;- rnorm(n_array, 55, 8)[grp] + rnorm(n, 0, 10)\ncanopy &lt;- pmin(pmax(canopy, 5), 95)\n\nhead(data.frame(array = grp,\n                x = round(x, 2), \n                y = round(y, 2),\n                canopy = round(canopy, 1)),\n     8)"
   },
   {
     "objectID": "Week2-SpatialPatterns.html#simulate-the-response",
     "href": "Week2-SpatialPatterns.html#simulate-the-response",
     "title": "WILD 591 – Spatial Population Modeling",
     "section": "Simulate the response",
-    "text": "Simulate the response\nThe intraclass correlation we built in is \\(2.5^2 / (2.5^2 + 1.2^2) \\approx 0.81\\): most of the variation is among arrays, not among deployments within them."
+    "text": "Simulate the response\n\n# ---- true parameter values ----\nb0       &lt;- 8.0     # intercept\nb1       &lt;- 2.5     # effect of canopy cover\nsd_array &lt;- 2.5     # among-array SD  (the random effect)\nsd_resid &lt;- 1.2     # among-deployment SD (residual noise)\n\nz_canopy &lt;- as.numeric(scale(canopy))\n\na    &lt;- rnorm(n_array, 0, sd_array)              # one draw per array\nrate &lt;- b0 + b1 * z_canopy + a[grp] + rnorm(n, 0, sd_resid)\n\ncams &lt;- data.frame( array_id = factor(sprintf(\"A%02d\", grp)),\n                    cam.id   = sprintf(\"A%02d-C%d\", grp, rep(1:n_cam, n_array)),\n                    x = x,\n                    y = y,\n                    canopy = canopy,\n                    z_canopy = z_canopy,\n                    rate = rate)\nstr(cams)\n\nThe intraclass correlation we built in is \\(2.5^2 / (2.5^2 + 1.2^2) \\approx 0.81\\): most of the variation is among arrays, not among deployments within them."
   },
   {
     "objectID": "Week2-SpatialPatterns.html#where-the-cameras-are",
     "href": "Week2-SpatialPatterns.html#where-the-cameras-are",
     "title": "WILD 591 – Spatial Population Modeling",
     "section": "Where the cameras are",
-    "text": "Where the cameras are\nEach colour is one array. The six deployments in a cluster are so close together that at this scale they nearly overlap and that is the whole problem."
+    "text": "Where the cameras are\nEach colour is one array. The six deployments in a cluster are so close together that at this scale they nearly overlap and that is the whole problem.\n\narray_colors &lt;- hcl.colors(n_array, \"Dark 3\")\nnames(array_colors) &lt;- levels(cams$array_id)\n\nplot(y ~ x,\n     data = cams,\n     col = array_colors[cams$array_id],\n     pch = 19, \n     cex = 1.3, \n     asp = 1,\n     xlab = \"Easting (km)\", \n     ylab = \"Northing (km)\",\n     main = \"12 arrays, 6 deployments each\")\ntext(ax, ay + 0.9, labels = levels(cams$array_id), cex = 0.7, col = \"#333333\")"
   },
   {
     "objectID": "Week2-SpatialPatterns.html#explore-the-data",
     "href": "Week2-SpatialPatterns.html#explore-the-data",
     "title": "WILD 591 – Spatial Population Modeling",
     "section": "Explore the data",
-    "text": "Explore the data\nThere is a clear canopy gradient, but the points also separate into coloured bands."
+    "text": "Explore the data\n\nplot(rate ~ z_canopy,\n     data = cams,\n     col = array_colors[cams$array_id],\n     pch = 19,\n     cex = 1.3,\n     xlab = \"Canopy cover (standardised)\",\n     ylab = \"Detections per 100 trap-nights\")\nlegend(\"topleft\", \n       bty = \"n\", \n       ncol = 3, \n       cex = 0.7,\n       legend = levels(cams$array_id),\n       pch = 19, \n       col = array_colors)\n\nThere is a clear canopy gradient, but the points also separate into coloured bands."
   },
   {
     "objectID": "Week2-SpatialPatterns.html#how-close-is-too-close",
     "href": "Week2-SpatialPatterns.html#how-close-is-too-close",
     "title": "WILD 591 – Spatial Population Modeling",
     "section": "How close is too close?",
-    "text": "How close is too close?\nDeployments in the same array are typically under 1 km apart; deployments in different arrays are many kilometres apart. There is no overlap between the two, which is what makes array_id a clean grouping variable here."
+    "text": "How close is too close?\nDeployments in the same array are typically under 1 km apart; deployments in different arrays are many kilometres apart. There is no overlap between the two, which is what makes array_id a clean grouping variable here.\n\nd    &lt;- as.matrix(dist(cbind(cams$x, cams$y)))\nsame &lt;- outer(as.character(cams$array_id), as.character(cams$array_id), \"==\")\nok   &lt;- upper.tri(d)\n\nround(tapply(d[ok], same[ok], summary)$`TRUE`, 2)   # within-array distances\nround(tapply(d[ok], same[ok], median), 2)           # median, by group"
   },
   {
     "objectID": "Week2-SpatialPatterns.html#the-dependence-made-visible",
     "href": "Week2-SpatialPatterns.html#the-dependence-made-visible",
     "title": "WILD 591 – Spatial Population Modeling",
     "section": "The dependence, made visible",
-    "text": "The dependence, made visible\nIf residuals were independent, both boxes would include zero. Same-array pairs are strongly positive: when one camera in a cluster is above the line, its neighbours are too.\nCorrelation is high for deployments under 1km apart and gone beyond that. The range of dependence is the size of a cluster."
+    "text": "The dependence, made visible\nIf residuals were independent, both boxes would include zero. Same-array pairs are strongly positive: when one camera in a cluster is above the line, its neighbours are too.\n\nm_naive &lt;- lm(rate ~ z_canopy, data = cams)   # ignores the grouping entirely\nr &lt;- residuals(m_naive)\n\npr &lt;- outer(r, r)                             # product of residual pairs\n\nboxplot(pr[ok] ~ same[ok],\n        names = c(\"Different array\", \"Same array\"),\n        col   = c(\"#DFD1A7\", \"#70002E\"),\n        ylab  = \"Product of residual pair\", xlab = \"\")\nabline(h = 0, lty = 2, lwd = 2, col = \"#333333\")\n\nCorrelation is high for deployments under 1km apart and gone beyond that. The range of dependence is the size of a cluster."
   },
   {
     "objectID": "Week2-SpatialPatterns.html#fixed-effects-model-naive",
     "href": "Week2-SpatialPatterns.html#fixed-effects-model-naive",
     "title": "WILD 591 – Spatial Population Modeling",
     "section": "Fixed effects model: naive",
-    "text": "Fixed effects model: naive\n\n\n\n\n\n\nWarning\n\n\nThe canopy slope is not badly off, but the model has one residual variance where the truth has two. Everything that varies among arrays has been dumped into the noise term, and the residuals are not independent."
+    "text": "Fixed effects model: naive\n\nsummary(m_naive)\n\n# The residual SD has swallowed both variance components\nround(c(estimated_sigma = summary(m_naive)$sigma,\n        truth = sqrt(sd_array^2 + sd_resid^2)), 3)\n\n\n\n\n\n\n\nWarning\n\n\nThe canopy slope is not badly off, but the model has one residual variance where the truth has two. Everything that varies among arrays has been dumped into the noise term, and the residuals are not independent."
   },
   {
     "objectID": "Week2-SpatialPatterns.html#fixed-effects-model-array-as-a-factor",
     "href": "Week2-SpatialPatterns.html#fixed-effects-model-array-as-a-factor",
     "title": "WILD 591 – Spatial Population Modeling",
     "section": "Fixed effects model: array as a factor",
-    "text": "Fixed effects model: array as a factor\n\n\n\n\n\n\nWarning\n\n\nThis recovers the within-array noise correctly, but spends 11 degrees of freedom on array identity. It gives no estimate of how variable arrays are in general, and it cannot say anything about an array you did not sample."
+    "text": "Fixed effects model: array as a factor\n\nm_fixed &lt;- lm(rate ~ z_canopy + array_id, data = cams)\nround(summary(m_fixed)$coefficients[1:3, ], 4)\n\nround(c(residual_sigma = summary(m_fixed)$sigma,\n        truth          = sd_resid), 3)\n\nanova(m_naive, m_fixed)\n\n\n\n\n\n\n\nWarning\n\n\nThis recovers the within-array noise correctly, but spends 11 degrees of freedom on array identity. It gives no estimate of how variable arrays are in general, and it cannot say anything about an array you did not sample."
   },
   {
     "objectID": "Week2-SpatialPatterns.html#random-intercepts-model-frequentist",
     "href": "Week2-SpatialPatterns.html#random-intercepts-model-frequentist",
     "title": "WILD 591 – Spatial Population Modeling",
     "section": "Random intercepts model: frequentist",
-    "text": "Random intercepts model: frequentist"
+    "text": "Random intercepts model: frequentist\n\nlibrary(lme4)\n\nmy_lmer &lt;- lme4::lmer(rate ~ z_canopy + (1 | array_id), data = cams)\nsummary(my_lmer)"
   },
   {
     "objectID": "Week2-SpatialPatterns.html#what-is-the-icc",
     "href": "Week2-SpatialPatterns.html#what-is-the-icc",
     "title": "WILD 591 – Spatial Population Modeling",
     "section": "What is the ICC?",
-    "text": "What is the ICC?\nThe intraclass correlation coefficient splits the leftover variance into its two levels:\n\\[\\text{ICC} = \\frac{\\sigma^2_a}{\\sigma^2_a + \\sigma^2_\\varepsilon}\\]\n\nA variance share. The fraction of variation, after canopy is accounted for, that is among arrays rather than among deployments within an array.\nA correlation. Take two deployments from the same array. The ICC is the correlation between their responses.\n\nAn ICC near 0 means array membership tells you nothing. Near 1 means the six deployments in a cluster are effectively one observation measured six times."
+    "text": "What is the ICC?\nThe intraclass correlation coefficient splits the leftover variance into its two levels:\n\\[\\text{ICC} = \\frac{\\sigma^2_a}{\\sigma^2_a + \\sigma^2_\\varepsilon}\\]\n\nA variance share. The fraction of variation, after canopy is accounted for, that is among arrays rather than among deployments within an array.\nA correlation. Take two deployments from the same array. The ICC is the correlation between their responses.\n\n\nlibrary(lme4)\nv &lt;- as.data.frame(lme4::VarCorr(my_lmer))\nv[, c(\"grp\", \"vcov\", \"sdcor\")]\n\nicc &lt;- v$vcov[1] / sum(v$vcov)\nround(c(var_among_arrays  = v$vcov[1],\n        var_within_array  = v$vcov[2],\n        ICC               = icc,\n        ICC_truth         = sd_array^2 / (sd_array^2 + sd_resid^2)), 3)\n\nAn ICC near 0 means array membership tells you nothing. Near 1 means the six deployments in a cluster are effectively one observation measured six times."
   },
   {
     "objectID": "Week2-SpatialPatterns.html#low-icc-vs.-high-icc",
     "href": "Week2-SpatialPatterns.html#low-icc-vs.-high-icc",
     "title": "WILD 591 – Spatial Population Modeling",
     "section": "Low ICC vs. high ICC",
-    "text": "Low ICC vs. high ICC\nSame canopy effect, same sample size, same everything except the among-array SD. On the left the boxes all straddle zero and array identity is nearly irrelevant. On the right whole arrays sit high or low together — that vertical scatter of boxes is the ICC."
+    "text": "Low ICC vs. high ICC\n\nsim_icc &lt;- function(sd_array,\n                    sd_resid = 1.2,\n                    n_array = 12, \n                    n_cam = 6,\n                    seed = 541) {\n  set.seed(seed)\n  n   &lt;- n_array * n_cam\n  grp &lt;- rep(seq_len(n_array), each = n_cam)\n  zc  &lt;- as.numeric(scale(rnorm(n_array, 55, 8)[grp] + rnorm(n, 0, 10)))\n  data.frame(\n    array.id = factor(sprintf(\"A%02d\", grp)),\n    z_canopy = zc,\n    rate     = 8 + 2.5 * zc + rnorm(n_array, 0, sd_array)[grp] +\n      rnorm(n, 0, sd_resid)\n  )\n}\n\npar(mfrow = c(1, 2), mar = c(5, 4, 3, 1))\n\nfor (s in c(0.4, 4.0)) {\n  d   &lt;- sim_icc(sd_array = s)\n  r   &lt;- residuals(lm(rate ~ z_canopy, data = d))\n  f   &lt;- lme4::lmer(rate ~ z_canopy + (1 | array.id), data = d)\n  vv  &lt;- as.data.frame(lme4::VarCorr(f))\n  ic  &lt;- vv$vcov[1] / sum(vv$vcov)\n\n  boxplot(r ~ d$array.id,\n          col = \"#DFD1A7\", border = \"#333333\",\n          ylim = c(-12, 12), las = 2, cex.axis = 0.7,\n          xlab = \"\", ylab = \"Residual after canopy\",\n          main = sprintf(\"SD among arrays = %.1f\\nICC = %.2f\", s, ic))\n  abline(h = 0, lty = 2, lwd = 2, col = \"#70002E\")\n}\n\npar(mfrow = c(1, 1), mar = c(5, 4, 4, 2) + 0.1)\n\nSame canopy effect, same sample size, same everything except the among-array SD. On the left the boxes all straddle zero and array identity is nearly irrelevant. On the right whole arrays sit high or low together — that vertical scatter of boxes is the ICC."
   },
   {
     "objectID": "Week2-SpatialPatterns.html#what-the-icc-costs-you",
     "href": "Week2-SpatialPatterns.html#what-the-icc-costs-you",
     "title": "WILD 591 – Spatial Population Modeling",
     "section": "What the ICC costs you",
-    "text": "What the ICC costs you\nFor a balanced design with \\(m\\) observations per group, the design effect is \\(1 + (m-1)\\cdot\\text{ICC}\\):\nThe 72 cameras carry roughly the information of a dozen independent ones close to the number of arrays, not the number of cameras.\n\n\n\n\n\n\nImportant\n\n\nTwo caveats worth remembering.\nThe ICC belongs to a model, not to a dataset. Add a covariate that explains among-array differences and the ICC drops, because variance moves out of \\(\\sigma^2_a\\).\nThe penalty applies to between-cluster quantities. For a predictor that varies purely within clusters, clustering can help, since each cluster acts as its own control. Canopy varies at both levels here, which is why the naive slope came out about right even though its residual structure was wrong.\n\n\n\n\nThat is the arithmetic behind the warning on the second slide."
+    "text": "What the ICC costs you\nFor a balanced design with \\(m\\) observations per group, the design effect is \\(1 + (m-1)\\cdot\\text{ICC}\\):\n\nm    &lt;- n_cam\nicc &lt;- with(as.data.frame(lme4::VarCorr(my_lmer)), vcov[1] / sum(vcov))\ndeff &lt;- 1 + (m - 1) * icc\n\nround(c(ICC           = icc,\n        per_array     = m,\n        design_effect = deff,\n        n_cameras     = n,\n        n_effective   = n / deff,\n        n_arrays      = n_array), 2)\n\nThe 72 cameras carry roughly the information of a dozen independent ones close to the number of arrays, not the number of cameras.\n\n\n\n\n\n\nImportant\n\n\nTwo caveats worth remembering.\nThe ICC belongs to a model, not to a dataset. Add a covariate that explains among-array differences and the ICC drops, because variance moves out of \\(\\sigma^2_a\\).\nThe penalty applies to between-cluster quantities. For a predictor that varies purely within clusters, clustering can help, since each cluster acts as its own control. Canopy varies at both levels here, which is why the naive slope came out about right even though its residual structure was wrong.\n\n\n\n\nThat is the arithmetic behind the warning on the second slide."
   },
   {
     "objectID": "Week2-SpatialPatterns.html#did-it-recover-the-truth",
     "href": "Week2-SpatialPatterns.html#did-it-recover-the-truth",
     "title": "WILD 591 – Spatial Population Modeling",
     "section": "Did it recover the truth?",
-    "text": "Did it recover the truth?\nOne model, both variance components, 3 parameters instead of 13.\n\nThe ICC should land near the 0.81 we built in."
+    "text": "Did it recover the truth?\n\nvc &lt;- as.data.frame(lme4::VarCorr(my_lmer))\n\nout &lt;- data.frame(\n  parameter = c(\"intercept\", \"canopy slope\", \"SD among arrays\", \"SD within array\"),\n  truth     = c(b0, b1, sd_array, sd_resid),\n  estimate  = c(lme4::fixef(my_lmer), vc$sdcor)\n)\nout[, -1] &lt;- round(out[, -1], 3)\nout\n\n# Intraclass correlation: share of variance that is among arrays\nround(vc$vcov[1] / sum(vc$vcov), 3)\n\nOne model, both variance components, 3 parameters instead of 13.\n\nThe ICC should land near the 0.81 we built in."
   },
   {
     "objectID": "Week2-SpatialPatterns.html#plot-with-fixed-effect-line",
     "href": "Week2-SpatialPatterns.html#plot-with-fixed-effect-line",
     "title": "WILD 591 – Spatial Population Modeling",
     "section": "Plot with fixed-effect line",
-    "text": "Plot with fixed-effect line\nThe thick black line is the average array. The dotted lines are the individual arrays, shifted up or down by their random intercept but sharing the same slope."
+    "text": "Plot with fixed-effect line\n\nplot(rate ~ z_canopy, \n     data = cams,\n     col = array_colors[cams$array_id],\n     pch = 19,\n     cex = 1.3,\n     xlab = \"Canopy cover (standardised)\",\n     ylab = \"Detections per 100 trap-nights\")\n\n# Population-level line\nabline(lme4::fixef(my_lmer), lwd = 4)\n\n# Array-level lines from the random intercepts \nre &lt;- lme4::ranef(my_lmer)$array_id[, 1]\nnames(re) &lt;- rownames(lme4::ranef(my_lmer)$array_id)\nfor (g in levels(cams$array_id)) {\n  abline(a = lme4::fixef(my_lmer)[1] + re[g],\n         b = lme4::fixef(my_lmer)[2],\n         col = array_colors[g], lty = 3, lwd = 2)\n}\n\nThe thick black line is the average array. The dotted lines are the individual arrays, shifted up or down by their random intercept but sharing the same slope."
   },
   {
     "objectID": "Week2-SpatialPatterns.html#compare-the-three-models",
     "href": "Week2-SpatialPatterns.html#compare-the-three-models",
     "title": "WILD 591 – Spatial Population Modeling",
     "section": "Compare the three models",
-    "text": "Compare the three models\nAll three get the slope roughly right. They differ in how honestly they describe the noise and how many parameters they burn doing it."
+    "text": "Compare the three models\n\ndata.frame(\n  model = c(\"lm, grouping ignored\", \"lm, array as fixed\", \"lmer, array as random\"),\n  canopy_est = round(c(coef(m_naive)[2],\n                       coef(m_fixed)[2],\n                       lme4::fixef(my_lmer)[2]), 3),\n  canopy_se  = round(c(summary(m_naive)$coefficients[2, 2],\n                       summary(m_fixed)$coefficients[2, 2],\n                       summary(my_lmer)$coefficients[2, 2]), 3),\n  params     = c(3, 14, 4),\n  residual_sd = round(c(summary(m_naive)$sigma, summary(m_fixed)$sigma,\n                        sigma(my_lmer)), 3)\n)\ncat(\"truth: canopy =\", b1, \" residual SD =\", sd_resid, \"\\n\")\n\nAll three get the slope roughly right. They differ in how honestly they describe the noise and how many parameters they burn doing it."
   },
   {
     "objectID": "Week2-SpatialPatterns.html#random-intercepts-bayesian",
     "href": "Week2-SpatialPatterns.html#random-intercepts-bayesian",
     "title": "WILD 591 – Spatial Population Modeling",
     "section": "Random intercepts: Bayesian",
-    "text": "Random intercepts: Bayesian\nCompare the posterior means against b0 = 8, b1 = 2.5, sd_array = 2.5, sd = 1.2."
+    "text": "Random intercepts: Bayesian\n\nlibrary(nimble)\nlibrary(coda)\n\nlist_data &lt;- list(\n  rate     = as.numeric(cams$rate),\n  n        = nrow(cams),\n  array_id = as.numeric(cams$array_id),\n  narray   = nlevels(cams$array_id),\n  canopy   = as.numeric(cams$z_canopy)\n)\n\ninits  &lt;- list(mean_a   = rnorm(1), \n               b_canopy = rnorm(1),\n               sd       = rlnorm(1), \n               sd_array = rlnorm(1))\nparams &lt;- c(\"mean_a\", \"b_canopy\", \"sd\", \"sd_array\")\n\nmodel_1 &lt;- nimbleCode({\n  for (i in 1:n) {\n    rate[i] ~ dnorm(mu[i], sd = sd)\n    mu[i]   &lt;- a[array_id[i]] + b_canopy * canopy[i]\n  }\n  for (j in 1:narray) {\n    a[j] ~ dnorm(mean_a, sd = sd_array)\n  }\n  mean_a   ~ dnorm(0, sd = 100)\n  sd_array ~ dunif(0, 20)\n  b_canopy ~ dnorm(0, sd = 100)\n  sd       ~ dunif(0, 100)\n})\n\nni &lt;- 4000; nb &lt;- 2000; nc &lt;- 4; nt &lt;- 1\nout &lt;- nimbleMCMC(code      = model_1,\n                  constants = list_data,\n                  inits     = inits, \n                  monitors  = params,\n                  nburnin   = nb, \n                  niter     = ni, \n                  thin      = nt,\n                  nchains   = nc,\n                  summary   = TRUE,\n                  samplesAsCodaMCMC = TRUE)\nout$summary$all.chains\n\nCompare the posterior means against b0 = 8, b1 = 2.5, sd_array = 2.5, sd = 1.2."
   },
   {
     "objectID": "Week2-SpatialPatterns.html#traceplots",
     "href": "Week2-SpatialPatterns.html#traceplots",
     "title": "WILD 591 – Spatial Population Modeling",
     "section": "Traceplots",
-    "text": "Traceplots"
+    "text": "Traceplots\n\ncoda::traceplot(out$samples)"
   },
   {
     "objectID": "Week2-SpatialPatterns.html#practice-1-change-the-grouping-strength",
     "href": "Week2-SpatialPatterns.html#practice-1-change-the-grouping-strength",
     "title": "WILD 591 – Spatial Population Modeling",
     "section": "Practice 1: change the grouping strength",
-    "text": "Practice 1: change the grouping strength\n\n\n\n\n\n\n\nPractice 1\n\n\nRe-simulate the survey and watch what the grouping does.\n\nSet sd_array &lt;- 0. Refit all three models. Do they still differ?\nSet sd_array &lt;- 6. What happens to the ICC, and to the naive residual SD?\nSet spread &lt;- 4 so deployments are scattered across the whole landscape instead of clustered. Is array_id still a meaningful group?"
+    "text": "Practice 1: change the grouping strength\n\n\n\n\n\n\n\nPractice 1\n\n\nRe-simulate the survey and watch what the grouping does.\n\nSet sd_array &lt;- 0. Refit all three models. Do they still differ?\nSet sd_array &lt;- 6. What happens to the ICC, and to the naive residual SD?\nSet spread &lt;- 4 so deployments are scattered across the whole landscape instead of clustered. Is array_id still a meaningful group?\n\n\n\n\n\n\nset.seed(99)\n\nn_array  &lt;- 12\nn_cam    &lt;- 6\nsd_array &lt;- 2.5     # &lt;- change THIS\nsd_resid &lt;- 1.2\nspread   &lt;- 0.3     # &lt;- deployment scatter around the array centre, km\n\nn   &lt;- n_array * n_cam\ngrp &lt;- rep(seq_len(n_array), each = n_cam)\nax  &lt;- runif(n_array, 1, 19); ay &lt;- runif(n_array, 1, 19)\n\nd2 &lt;- data.frame(\n  array_id = factor(sprintf(\"A%02d\", grp)),\n  x = ax[grp] + rnorm(n, 0, spread),\n  y = ay[grp] + rnorm(n, 0, spread),\n  z_canopy = as.numeric(scale(rnorm(n_array, 55, 8)[grp] + rnorm(n, 0, 10)))\n)\nd2$rate &lt;- 8 + 2.5 * d2$z_canopy +\n  rnorm(n_array, 0, sd_array)[grp] + rnorm(n, 0, sd_resid)\n\nfit &lt;- lme4::lmer(rate ~ z_canopy + (1 | array_id), data = d2)\nv   &lt;- as.data.frame(lme4::VarCorr(fit))\n\nround(c(canopy = lme4::fixef(fit)[2],\n        sd_array = v$sdcor[1],\n        sd_resid = v$sdcor[2],\n        ICC = v$vcov[1] / sum(v$vcov)), 3)"
   },
   {
     "objectID": "Week2-SpatialPatterns.html#practice-2-random-slopes",

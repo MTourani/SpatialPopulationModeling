@@ -20,7 +20,6 @@ title-slide-attributes:
   data-background-image: "images/cover-ch1.jpg"
   data-background-size: "30%"
   data-background-position: "right 1px bottom 1px"
-  
 ---
 
 {{< include ./_extensions/r-wasm/live/_knitr.qmd >}}
@@ -54,8 +53,7 @@ We talked about Tobler's First Law of Geography... Everything is...
 
 Autocorrelation... Can be positive, or negative For example here: Positive autocorrelation, where darker values are closer together, and negative autocorrelation where dark cells are further apart from one another. CHECKBOARD
 
-The middle plot shows an example pattern with random distribution of values. NO AUTOCORRELATION 
-Based on the degree of autocorrelation, in addition to random process, you may get different patterns.
+The middle plot shows an example pattern with random distribution of values. NO AUTOCORRELATION Based on the degree of autocorrelation, in addition to random process, you may get different patterns.
 :::
 
 ## Processes
@@ -109,9 +107,7 @@ par(op)
 ```
 
 ::: notes
-We learned that different processes may lead to spatial pattern. 
-It could be some spatial dependency due to environemental conditions. 
-
+We learned that different processes may lead to spatial pattern. It could be some spatial dependency due to environemental conditions.
 :::
 
 ## Spatial structure
@@ -121,8 +117,6 @@ It could be some spatial dependency due to environemental conditions.
 Spatially distributed environmental factors
 
 ::: notes
-
-
 For example, this is a schematic of an environmental variable that is spatially distributed. There are two patches of light and dark grey. There is some sort of structure in the space.
 :::
 
@@ -141,11 +135,12 @@ and there are specific plant seeds that grow only on those two patches. light se
 Spatially distributed seeds due to dispersal processes from the trees and the spatially distributed environmental factor
 
 ::: notes
-Yet, seeds are coming from trees so what we see in how seeds are distributed in space depends on the tree they dispersed from. The seeds from black trees are closer to the black trees, and conifer seeds are closer to the conifer trees. 
+Yet, seeds are coming from trees so what we see in how seeds are distributed in space depends on the tree they dispersed from. The seeds from black trees are closer to the black trees, and conifer seeds are closer to the conifer trees.
 
 Both seed dispersal and autocorrelation led to the spatial pattern we see. Dispersal is the property of the system under study. Environmental factor is spatially autocorrelated. This is often the case that these two together lead to a spatial pattern and most R packages tell us there is spatial dependency but can't distinguish the origin of spatial pattern whether it's spatial dependency and spatial autocorrelation. Therefore, the study design plays a big role in being able to differentiate the two biotic interaction vs abiotic relationship.
 :::
 
+````{=html}
 <!--
 ## Spatial design and analysis
 
@@ -183,6 +178,7 @@ There are other sources of spatial dependency beyond the organism and its enviro
 Questions to expand later lectures: which aspect is affected by each samling choice? precision, point estimate,... Fletcher and Fortin 2019
 :::
 -->
+````
 
 # 1.2 Simulate non/random locations
 
@@ -194,7 +190,7 @@ R.version.string
 
 Now confirm plotting works:
 
-```{r, echo=FALSE}
+```{r, echo=TRUE}
 plot(1:10,
      (1:10) ^ 2,
      pch = 19,
@@ -214,7 +210,7 @@ The version string printed above is whichever R Quarto used to render, which is 
 
 Same abundance values, two different spatial arrangements:
 
-```{r, echo=FALSE}
+```{r, echo=TRUE}
 set.seed(42)
 n <- 100
 pop <- rpois(n, lambda = 8)
@@ -259,7 +255,7 @@ Have them run `summary(pop)` to confirm the marginal distribution is untouched.
 
 For a crude first look, let's correlate the value with its coordinate:
 
-```{r, echo=FALSE}
+```{r, echo=TRUE}
 cor(xa, pop)   # random arrangement
 cor(xb, pop)   # structured arrangement
 ```
@@ -280,7 +276,7 @@ This only detects a monotonic east–west gradient. It would completely miss pat
 
 The environment is autocorrelated before any organism responds. Here, we build an spatially autocorrelated environment.
 
-```{r, echo=FALSE}
+```{r, echo=TRUE}
 set.seed(42)
 n <- 40
 noise <- matrix(rnorm(n * n), n, n)
@@ -318,7 +314,7 @@ for (i in seq_len(nrow(m))) — rows. seq_len() rather than 1:nrow(m) is deliber
 
 Try with different range of autocorrelation: w = 4 first, and then re-run with w = 1 and w = 10.
 
-```{r, echo=FALSE}
+```{r, echo=TRUE}
 #| fig-alt: "Two side-by-side raster images of a 40 by 40 grid. The left image is fine-grained random speckle. The right image shows large smooth patches of similar value."
 ## w is the smoothing half-width: the range of autocorrelation.
 env <- smooth_field(noise, w = 4)
@@ -346,7 +342,7 @@ Any positive whole number works. Start with `4`, then change it and re-run — t
 
 :::: {.solution exercise="ex5"}
 ::: {.callout-tip collapse="true"}
-```{r, echo=FALSE}
+```{r, echo=TRUE}
 set.seed(42); n <- 40
 noise <- matrix(rnorm(n * n), n, n)
 smooth_field <- function(m, w) {
@@ -382,9 +378,10 @@ Colour note: `hcl.colors()` with "YlGnBu" is perceptually uniform and colourblin
 :::
 
 ## Autocorrelated environment/species
-Environment could be spatially structured (**SA-env**) *and* species clusters for endogenous reasons (**SA-sp**). 
 
-```{r, echo=FALSE}
+Environment could be spatially structured (**SA-env**) *and* species clusters for endogenous reasons (**SA-sp**).
+
+```{r, echo=TRUE}
 set.seed(7)
 n <- 40
 smooth_field <- function(m, w) {
@@ -420,8 +417,8 @@ Let's bring in regression. This is a simple schematic to represent regression: Y
 
 Statistical models describe:
 
-- **Systematic pattern** in a random variable (response), possibly as a function of covariates
-- **Random (unexplained) variability** around the mean:
+-   **Systematic pattern** in a random variable (response), possibly as a function of covariates
+-   **Random (unexplained) variability** around the mean:
 
 Response = systematic + random
 
@@ -429,7 +426,7 @@ Response = systematic + random
 other pairs of terms: deterministic + stochastic, or mean + dispersion structure of model
 :::
 
-:::{.notes}
+::: notes
 Broadly, statistical models describe:
 :::
 
@@ -450,9 +447,8 @@ Stochastic process:\
 
 > Why do we need both? Deterministic part is a mathematical model of a process while stochastic part is a statistical model of data that arise from the process.
 
-:::{.notes}
-You'll see this model structure throughout the semester.
-In the deterministic part, we often have the expected value equals a function of paramters and observations.
+::: notes
+You'll see this model structure throughout the semester. In the deterministic part, we often have the expected value equals a function of paramters and observations.
 
 In the stochastic part, observations are distributed as a probablistic function of the expected value and uncertainty.
 :::
@@ -472,18 +468,17 @@ $$\mu_i = \beta_0 + \beta_1 x_i, \qquad y_i \sim    {Normal}(\mu_i, \sigma^2)$$
 > **What if the errors aren't normal?**
 
 ::: notes
-While I have you here, what if...
-You could use a Poisson, or Binomial distribution, and then use link functions to be able to model the relationship as linear.
+While I have you here, what if... You could use a Poisson, or Binomial distribution, and then use link functions to be able to model the relationship as linear.
 :::
 
 ## Model assumptions
 
 Linear regression assumes:
 
-- **Linearity** — the relationship between predictors and response is linear
-- **Independence** — errors are independent of each other
-- **Homoscedasticity** — constant error variance
-- **Normality** — residuals are normally distributed
+-   **Linearity** — the relationship between predictors and response is linear
+-   **Independence** — errors are independent of each other
+-   **Homoscedasticity** — constant error variance
+-   **Normality** — residuals are normally distributed
 
 ::: callout-note
 Assumptions are often violated by real data, but we have tools to detect and address them.
@@ -499,15 +494,15 @@ Linear regression assumes normality of the residuals. ...
 
 Sometimes observations within a group share more in common with each other than with observations from other groups, violating the **independence** assumption.
 
-- Group membership can be modeled as a **random effect**
+-   Group membership can be modeled as a **random effect**
 
 ## Spatial group membership
 
 Observations of one individual animal have more in common compared to observations of other individuals. The grouping of observations could also be spatial:
 
-- Camera deployments deployed as clusters within an array
-- Plots nested inside stands, transects nested inside watersheds
-- Repeat visits to the same site
+-   Camera deployments deployed as clusters within an array
+-   Plots nested inside stands, transects nested inside watersheds
+-   Repeat visits to the same site
 
 Cameras a few hundred metres apart sit in the same stand, see the same individuals, and share whatever we failed to measure. **They are not independent samples of the landscape.**
 
@@ -516,6 +511,7 @@ Deploying 72 cameras does not buy you 72 independent observations. If they are c
 :::
 
 # 2.2 Space-environment relationship
+
 ## Independent errors
 
 > Spatially independent errors means that there is no spatial autocorrelation neither in the response nor in the environment.
@@ -544,24 +540,23 @@ Based on friend or foe, there are two general model types referred to as "spatia
 
 (2) Multiple processes play at different spatial scales and we need to partial out spatial variation at all scales.
 
-:::{.notes}
+::: notes
 There are a class of models that incoporate space to account for the statistical nuisance. You're interested in how a specific env variable is affecting your response, and spatial autocorrelation is on your way! You would want to get rid of it. Generalized Linear Mixed Models, Generalized Additive Mixed Models, Autoregressive Models are all in this category.
 :::
-
 
 ## Example camera trap data
 
 We **simulate** a camera trap survey so we know the truth and can check what each model recovers:
 
-- **12 camera arrays** scattered across a 20 × 20 km landscape
-- **6 deployments per array**, each within a few hundred metres of the array centre
-- Response: detection rate (detections per 100 trap-nights)
-- Covariate: canopy cover at the deployment
-- Grouping: `array_id`
+-   **12 camera arrays** scattered across a 20 × 20 km landscape
+-   **6 deployments per array**, each within a few hundred metres of the array centre
+-   Response: detection rate (detections per 100 trap-nights)
+-   Covariate: canopy cover at the deployment
+-   Grouping: `array_id`
 
 ## Simulate the camera array
 
-```{r, echo=FALSE}
+```{r, echo=TRUE}
 rm(list = ls())
 set.seed(541)
 
@@ -591,7 +586,7 @@ head(data.frame(array = grp,
 
 ## Simulate the response
 
-```{r, echo=FALSE}
+```{r, echo=TRUE}
 # ---- true parameter values ----
 b0       <- 8.0     # intercept
 b1       <- 2.5     # effect of canopy cover
@@ -616,9 +611,10 @@ str(cams)
 The intraclass correlation we built in is $2.5^2 / (2.5^2 + 1.2^2) \approx 0.81$: most of the variation is **among** arrays, not among deployments within them.
 
 ## Where the cameras are
+
 Each colour is one array. The six deployments in a cluster are so close together that at this scale they nearly overlap and that is the whole problem.
 
-```{r, echo=FALSE}
+```{r, echo=TRUE}
 array_colors <- hcl.colors(n_array, "Dark 3")
 names(array_colors) <- levels(cams$array_id)
 
@@ -634,11 +630,9 @@ plot(y ~ x,
 text(ax, ay + 0.9, labels = levels(cams$array_id), cex = 0.7, col = "#333333")
 ```
 
-
-
 ## Explore the data
 
-```{r, echo=FALSE}
+```{r, echo=TRUE}
 plot(rate ~ z_canopy,
      data = cams,
      col = array_colors[cams$array_id],
@@ -655,13 +649,13 @@ legend("topleft",
        col = array_colors)
 ```
 
-There is a clear canopy gradient, but the points also separate into coloured bands. 
+There is a clear canopy gradient, but the points also separate into coloured bands.
 
 ## How close is too close?
 
 Deployments in the same array are typically under 1 km apart; deployments in different arrays are many kilometres apart. There is no overlap between the two, which is what makes `array_id` a clean grouping variable here.
 
-```{r, echo=FALSE}
+```{r, echo=TRUE}
 d    <- as.matrix(dist(cbind(cams$x, cams$y)))
 same <- outer(as.character(cams$array_id), as.character(cams$array_id), "==")
 ok   <- upper.tri(d)
@@ -670,11 +664,11 @@ round(tapply(d[ok], same[ok], summary)$`TRUE`, 2)   # within-array distances
 round(tapply(d[ok], same[ok], median), 2)           # median, by group
 ```
 
-
 ## The dependence, made visible
+
 If residuals were independent, both boxes would include zero. Same-array pairs are strongly positive: when one camera in a cluster is above the line, its neighbours are too.
 
-```{r, echo=FALSE}
+```{r, echo=TRUE}
 m_naive <- lm(rate ~ z_canopy, data = cams)   # ignores the grouping entirely
 r <- residuals(m_naive)
 
@@ -689,6 +683,7 @@ abline(h = 0, lty = 2, lwd = 2, col = "#333333")
 
 Correlation is high for deployments under 1km apart and gone beyond that. The range of dependence is the size of a cluster.
 
+````{=html}
 <!-- 
 ## The same thing as a correlogram
 
@@ -710,10 +705,11 @@ abline(h = 0, lty = 2, lwd = 2, col = "#333333")
 
 Correlation is high for deployments under 1 km apart and gone beyond that. The range of dependence is the size of a cluster.
 -->
+````
 
 ## Fixed effects model: naive
 
-```{r, echo=FALSE}
+```{r, echo=TRUE}
 summary(m_naive)
 
 # The residual SD has swallowed both variance components
@@ -727,7 +723,7 @@ The canopy slope is not badly off, but the model has one residual variance where
 
 ## Fixed effects model: array as a factor
 
-```{r, echo=FALSE}
+```{r, echo=TRUE}
 m_fixed <- lm(rate ~ z_canopy + array_id, data = cams)
 round(summary(m_fixed)$coefficients[1:3, ], 4)
 
@@ -745,13 +741,12 @@ This recovers the within-array noise correctly, but spends **11 degrees of freed
 
 ## Random intercepts model: frequentist
 
-```{r, echo=FALSE}
+```{r, echo=TRUE}
 library(lme4)
 
 my_lmer <- lme4::lmer(rate ~ z_canopy + (1 | array_id), data = cams)
 summary(my_lmer)
 ```
-
 
 ## What is the ICC?
 
@@ -760,9 +755,9 @@ The **intraclass correlation coefficient** splits the leftover variance into its
 $$\text{ICC} = \frac{\sigma^2_a}{\sigma^2_a + \sigma^2_\varepsilon}$$
 
 -   **A variance share.** The fraction of variation, after canopy is accounted for, that is *among* arrays rather than among deployments within an array.
--   **A correlation.** Take two deployments from the same array. The ICC is the correlation between their responses. 
+-   **A correlation.** Take two deployments from the same array. The ICC is the correlation between their responses.
 
-```{r, echo=FALSE}
+```{r, echo=TRUE}
 library(lme4)
 v <- as.data.frame(lme4::VarCorr(my_lmer))
 v[, c("grp", "vcov", "sdcor")]
@@ -778,7 +773,7 @@ An ICC near 0 means array membership tells you nothing. Near 1 means the six dep
 
 ## Low ICC vs. high ICC
 
-```{r, echo=FALSE}
+```{r, echo=TRUE}
 sim_icc <- function(sd_array,
                     sd_resid = 1.2,
                     n_array = 12, 
@@ -822,7 +817,7 @@ Same canopy effect, same sample size, same everything except the among-array SD.
 
 For a balanced design with $m$ observations per group, the **design effect** is $1 + (m-1)\cdot\text{ICC}$:
 
-```{r, echo=FALSE}
+```{r, echo=TRUE}
 m    <- n_cam
 icc <- with(as.data.frame(lme4::VarCorr(my_lmer)), vcov[1] / sum(vcov))
 deff <- 1 + (m - 1) * icc
@@ -835,7 +830,7 @@ round(c(ICC           = icc,
         n_arrays      = n_array), 2)
 ```
 
-The 72 cameras carry roughly the information of a dozen independent ones close to the number of arrays, not the number of cameras. 
+The 72 cameras carry roughly the information of a dozen independent ones close to the number of arrays, not the number of cameras.
 
 ::: callout-important
 Two caveats worth remembering.
@@ -845,13 +840,13 @@ Two caveats worth remembering.
 **The penalty applies to between-cluster quantities.** For a predictor that varies purely *within* clusters, clustering can help, since each cluster acts as its own control. Canopy varies at both levels here, which is why the naive slope came out about right even though its residual structure was wrong.
 :::
 
-:::{.notes}
+::: notes
 That is the arithmetic behind the warning on the second slide.
 :::
 
 ## Did it recover the truth?
 
-```{r, echo=FALSE}
+```{r, echo=TRUE}
 vc <- as.data.frame(lme4::VarCorr(my_lmer))
 
 out <- data.frame(
@@ -866,15 +861,15 @@ out
 round(vc$vcov[1] / sum(vc$vcov), 3)
 ```
 
-One model, both variance components, 3 parameters instead of 13. 
+One model, both variance components, 3 parameters instead of 13.
 
-:::{.notes}
+::: notes
 The ICC should land near the 0.81 we built in.
 :::
 
 ## Plot with fixed-effect line
 
-```{r, echo=FALSE}
+```{r, echo=TRUE}
 plot(rate ~ z_canopy, 
      data = cams,
      col = array_colors[cams$array_id],
@@ -898,6 +893,7 @@ for (g in levels(cams$array_id)) {
 
 The thick black line is the average array. The dotted lines are the individual arrays, shifted up or down by their random intercept but sharing the same slope.
 
+````{=html}
 <!-- 
 ## Shrinkage
 
@@ -914,10 +910,11 @@ abline(0, 1, lty = 2, lwd = 2, col = "#333333")
 
 The random intercepts sit slightly inside the 1:1 line: arrays are pulled toward the overall mean. With only six cameras each, a little **shrinkage** guards against over-reading a noisy array.
 -->
+````
 
 ## Compare the three models
 
-```{r, echo=FALSE}
+```{r, echo=TRUE}
 data.frame(
   model = c("lm, grouping ignored", "lm, array as fixed", "lmer, array as random"),
   canopy_est = round(c(coef(m_naive)[2],
@@ -937,7 +934,7 @@ All three get the slope roughly right. They differ in how honestly they describe
 
 ## Random intercepts: Bayesian
 
-```{r, echo=FALSE}
+```{r, echo=TRUE}
 #| cache: true
 library(nimble)
 library(coda)
@@ -988,7 +985,7 @@ Compare the posterior means against `b0 = 8`, `b1 = 2.5`, `sd_array = 2.5`, `sd 
 
 ## Traceplots
 
-```{r, echo=FALSE}
+```{r, echo=TRUE}
 #| cache: true
 coda::traceplot(out$samples)
 ```
@@ -1005,12 +1002,12 @@ Re-simulate the survey and watch what the grouping does.
 3.  Set `spread <- 4` so deployments are scattered across the whole landscape instead of clustered. Is `array_id` still a meaningful group?
 :::
 
-```{r, echo=FALSE}
+```{r, echo=TRUE}
 set.seed(99)
 
 n_array  <- 12
 n_cam    <- 6
-sd_array <- 2.5     # <- change me
+sd_array <- 2.5     # <- change THIS
 sd_resid <- 1.2
 spread   <- 0.3     # <- deployment scatter around the array centre, km
 
@@ -1064,8 +1061,7 @@ Look at a dataset you have collected.
 3.  Fit the model with and without the random effect and compare the variance components.
 :::
 
-
-
+````{=html}
 <!-- 
 
 
@@ -1175,6 +1171,7 @@ Then the question that opens Chapter 5: *given only that third panel, how would 
 :::
 
 -->
+````
 
 ````{=html}
 <!--
