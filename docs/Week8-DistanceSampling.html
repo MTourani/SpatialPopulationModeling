@@ -25404,7 +25404,6 @@ display:block!important;
 <li>Observation Submodel:</li>
 </ul>
 <p><span class="math display">\[y_{ij} \sim Bernoulli(p_{ij} \times z_i)\]</span></p>
-<p><span class="math display">\[p_{ij} = 1 − exp(−h_{ij})\]</span></p>
 <p><span class="math display">\[\text{h}_{ij}=\exp(p_0)\exp\!\big(-d_{ij}^2/(2\sigma^2)\big),\qquad p_{ij}=1-\exp(-\text{h}_{ij})\]</span></p>
 </section>
 <section id="model-structure-part-2" class="slide level2">
@@ -25439,119 +25438,9 @@ display:block!important;
 <blockquote>
 <p>Augment dataset with all-zero detection histories up to superpopulation <span class="math inline">\(M\)</span>.</p>
 </blockquote>
-<p>Latent indicator <span class="math inline">\(z_i \sim \text{Bernoulli}(\psi)\)</span>. <span class="math display">\[z_i\sim\text{Bernoulli}(\psi),\quad i=1,\dots,M;\qquad N=\sum_{i=1}^{M}z_i\sim\text{Binomial}(M,\psi),\quad \psi\sim\text{Uniform}(0,1)\]</span></p>
+<p>Latent indicator <span class="math inline">\(z_i \sim \text{Bernoulli}(\psi)\)</span>. <span class="math display">\[z_i\sim\text{Bernoulli}(\psi),\quad i=1,\dots,M;\qquad N=\sum_{i=1}^{M}z_i,\quad \psi\sim\text{Uniform}(0,1)\]</span></p>
 <aside class="notes">
 <p>In the standard formulation we specify a prior distribution for total population size by introducing a set of Bernoulli indicator variables and assuming</p>
-<style type="text/css">
-span.MJX_Assistive_MathML {
-position:absolute!important;
-clip: rect(1px, 1px, 1px, 1px);
-padding: 1px 0 0 0!important;
-border: 0!important;
-height: 1px!important;
-width: 1px!important;
-overflow: hidden!important;
-display:block!important;
-}</style></aside>
-</section>
-<section id="activity-overview" class="slide level2 scrollable">
-<h2>Activity overview</h2>
-<p><strong>Format</strong>: Groups of 3<br>
-<strong>Material</strong>: 1. Rules card: one per student (3 per group).</p>
-<ol start="2" type="1">
-<li><p>Spotted-houses sheet: one per group.</p></li>
-<li><p>Haunted Roster: one per group. Each group’s random numbers are different.</p></li>
-<li><p>Pumpkin Patch table for <span class="math inline">\(M\)</span> = r M: one per group.</p></li>
-<li><p>Group scoreboard: one per group.</p></li>
-<li><p>Three role name tags per group: <em>Ghost Hunter</em>, <em>Candy Counter</em>, <em>Pumpkin Keeper</em>.</p></li>
-</ol>
-<p>On Halloween night, a trick-or-treat survey team walked down Hollow Lane and wrote down every house where they spotted a lit jack-o’-lantern (a candy house). Houses set far back from the sidewalk are easy to miss. The team spotted n candy houses. How many candy houses are really on Hollow Lane?</p>
-<aside class="notes">
-<p>“Our survey team spotted n candy houses. We know they missed some, because houses set back from the sidewalk are hard to see. Last week we’d just divide: n divided by p. That works for simple problems. But many models describe <strong>each house</strong> separately: where it is, how big its jack-o’-lantern is, whether it was spotted. To write that kind of model, we need one row per real house. And we don’t know how many real houses there are. So we don’t even know how big our data sheet should be. Tonight we’re going to fix that with ghosts.” <strong>Likely question:</strong> “Why not just divide by <span class="math inline">\(\bar p\)</span>?” <em>Answer:</em> For this simple case you can, and the answers will agree (Step 5 shows it). DA matters for more complex models where there is no simple formula.</p>
-<style type="text/css">
-span.MJX_Assistive_MathML {
-position:absolute!important;
-clip: rect(1px, 1px, 1px, 1px);
-padding: 1px 0 0 0!important;
-border: 0!important;
-height: 1px!important;
-width: 1px!important;
-overflow: hidden!important;
-display:block!important;
-}</style></aside>
-<p><strong>Key idea.</strong> In a hierarchical model, <span class="math inline">\(N\)</span> sets the number of rows (and the number of hidden distances). Standard MCMC software needs a fixed number of unknowns. DA fixes the number of rows.</p>
-</section>
-<section id="activity-1" class="slide level2">
-<h2>Activity</h2>
-<p><strong>Your task</strong>: Each group keeps a Haunted Roster: the n houses they spotted plus extra “ghost” rows. Round by round, they decide which ghost rows are real houses they walked past (treat) and which are just ghosts (trick). The number of real houses changes each round, and those numbers become the answer.</p>
-<p>Step1: Assign roles.</p>
-<p><em>Ghost Hunter</em>: reads the round’s numbers aloud if the group wants help keeping pace, and checks that everyone writes in the correct round’s column.</p>
-<p><em>Candy Counter</em>: adds the 1s, works out <span class="math inline">\(N\)</span>, and calls <span class="math inline">\(N\)</span> out to Mahdieh.</p>
-<p><em>Pumpkin Keeper</em>: rolls the die and reads the Pumpkin Patch table.</p>
-<p>All three students check their own block of ghost rows every round.</p>
-<p>Note in roster: rows 1 to n are spotted houses (always real); rows n + 1 to M are ghost rows that might be real houses we walked past, or might be nothing.</p>
-</section>
-<section id="activity-2" class="slide level2">
-<h2>Activity</h2>
-<p><strong>Your task</strong>: Each group keeps a Haunted Roster: the n houses they spotted plus extra “ghost” rows. Round by round, they decide which ghost rows are real houses they walked past (treat) and which are just ghosts (trick). The number of real houses changes each round, and those numbers become the answer.</p>
-<p>Step2:</p>
-<p>For each round, the groups follow these steps.</p>
-<p>All students: Check your block of ghost rows against the current T. Write 1 or 0 in this round’s column.</p>
-<p>Each student: Tell the Candy Counter how many 1s you wrote.</p>
-<p>Candy Counter: Compute <span class="math inline">\(N\)</span> = n + total 1s. Write it on the scoreboard and call it out.</p>
-<p>Instructor: Write each group’s <span class="math inline">\(N\)</span> on the class candy board.</p>
-<p>Pumpkin Keeper: Use the dice and the Pumpkin Patch table to get the new <span class="math inline">\(\psi\)</span> and next T. Write them on the scoreboard.</p>
-<p>Once every group has its next T, call the next round.</p>
-<aside class="notes">
-<p>“Instead of guessing the number of rows, we make the sheet <strong>too long on purpose</strong>: M rows. The first n are houses we spotted. The rest are ghost rows: rows where nobody saw anything. Some ghost rows are real candy houses we walked right past. Those are <strong>treats</strong>. Others are just ghosts with no house at all. Those are <strong>tricks</strong>. Every row secretly has a label: 1 for treat, 0 for trick. Count the 1s, and that’s how many candy houses there are.”</p>
-<p><strong>The model behind the game.</strong> For each row <span class="math inline">\(i = 1, \dots, M\)</span>:</p>
-<p><span class="math display">\[z_i \sim \text{Bernoulli}(\psi), \qquad y_i \mid z_i \sim \text{Bernoulli}(z_i\,\bar p), \qquad N = \sum_{i=1}^{M} z_i.\]</span></p>
-<p>The haunting rate <span class="math inline">\(\psi\)</span> is the chance that any row is a real house. A flat prior on <span class="math inline">\(\psi\)</span> gives a flat prior on <span class="math inline">\(N\)</span> from 0 to <span class="math inline">\(M\)</span>, so the ghosts do not add information. They only give <span class="math inline">\(N\)</span> room to vary.</p>
-<style type="text/css">
-span.MJX_Assistive_MathML {
-position:absolute!important;
-clip: rect(1px, 1px, 1px, 1px);
-padding: 1px 0 0 0!important;
-border: 0!important;
-height: 1px!important;
-width: 1px!important;
-overflow: hidden!important;
-display:block!important;
-}</style></aside>
-</section>
-<section id="practice-row" class="slide level2">
-<h2>Practice row</h2>
-<p>Spotted houses are easy: a ghost can’t hand out candy, so anything we spotted is real. For a ghost row, ask: we didn’t spot anything here, so what’s the chance it’s still a real house? There are two ways to see nothing: it’s a real house we walked past, or it’s just a ghost.</p>
-<p><span class="math display">\[P(\text{treat} \mid \text{not spotted}) = \frac{\psi \times (1 - \hat p)}{\psi \times (1 - \hat p) + (1 - \psi)}\]</span></p>
-</section>
-<section id="summary" class="slide level2 scrollable">
-<h2>Summary</h2>
-<ol type="1">
-<li><p><strong>What:</strong> Add extra all-zero “ghost” rows to the data, so there are <span class="math inline">\(M\)</span> rows. Each row gets a hidden label <span class="math inline">\(z\)</span>: treat (1) or trick (0).</p></li>
-<li><p><strong>Why:</strong> It makes the data set a fixed size, so models where <span class="math inline">\(N\)</span> is unknown can be fitted with standard software.</p></li>
-<li><p><strong>How:</strong> Repeat two steps: label ghost rows given <span class="math inline">\(\psi\)</span>, then update <span class="math inline">\(\psi\)</span> given the labels. <span class="math inline">\(N = \sum z\)</span> each round, and all the <span class="math inline">\(N\)</span> values together form the posterior.</p></li>
-<li><p><strong>Check:</strong> <span class="math inline">\(N\)</span> must stay well away from <span class="math inline">\(M\)</span>.</p></li>
-</ol>
-<p><strong>What we simplified.</strong> We held <span class="math inline">\(\hat p\)</span> fixed. A full analysis also estimates the detection function from the setback distances and treats each missed house’s distance as unknown. The same two steps are still at the heart of it. Below is the mode definition:</p>
-<pre><code>model {
-  psi   ~ dunif(0, 1)                 # haunting rate; flat prior on N from 0 to M
-  sigma ~ dunif(0, 100)               # detection function scale
-  for (i in 1:M) {
-    z[i] ~ dbern(psi)                 # treat (1) or trick (0)
-    x[i] ~ dunif(0, B)                # setback distance: known if spotted
-    p[i] &lt;- exp(-x[i] * x[i] / (2 * sigma * sigma))
-    mu[i] &lt;- z[i] * p[i]              # a ghost can never be spotted
-    y[i] ~ dbern(mu[i])               # 1 = spotted house, 0 = ghost row
-  }
-  N &lt;- sum(z[])                       # the candy count
-}</code></pre>
-<p><strong>Where DA is used in practice.</strong> Models with individual covariates (such as group size), spatial capture–recapture, open-population models, and integrated models.</p>
-<aside class="notes">
-<ol type="1">
-<li><p>It fixes the size of the data set when the number of individuals is unknown, so the model can be fitted with standard methods.</p></li>
-<li><p>Ghosts can never be spotted, so a spotted house must be real. A row with no sighting could be a missed house or a ghost.</p></li>
-<li><p><span class="math inline">\(N\)</span> piled up at or near <code>M_small</code>, and <span class="math inline">\(\psi\)</span> was close to 1.</p></li>
-</ol>
 <style type="text/css">
 span.MJX_Assistive_MathML {
 position:absolute!important;
