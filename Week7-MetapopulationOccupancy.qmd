@@ -1313,7 +1313,7 @@ Propagating it properly needs a Bayesian treatment (Chandler et al.
 
 ## Implicit vs explicit space
 
-```{r, echo = F, include = T}
+```{r, echo = T}
 # IMPLICIT: Only neighbourhood relations exist.
 lattice <- matrix(0, nrow = 6, ncol = 6)
 lattice[3, 3] <- 1
@@ -1345,7 +1345,7 @@ explicit.
 In a grid, neighbours are defined by **topology**, not distance. Find
 the four rook neighbours of cell (3, 3) on a 6 × 6 grid.
 
-```{r, echo = F, include = T}
+```{r, echo = T}
 i <- 3; j <- 3; n <- 6
 
 nb <- rbind(c(i - 1, j), c(i + 1, j), c(i, j - 1), c(i, j + 1))
@@ -1366,7 +1366,7 @@ hold the same object used two lines above for the row check.
 
 :::: {.solution exercise="ex4"}
 ::: {.callout-tip collapse="true"}
-```{r, echo = F, include = T}
+```{r, echo = T}
 i <- 3; j <- 3; n <- 6
 nb <- rbind(c(i - 1, j), c(i + 1, j), c(i, j - 1), c(i, j + 1))
 colnames(nb) <- c("row", "col")
@@ -1395,7 +1395,7 @@ what to do about it.
 
 ## Explicit space and real distances
 
-```{r, echo = F, include = T}
+```{r, echo = T}
 # EXPLICIT: patches with coordinates and areas
 patches <- data.frame(
   id   = c("A", "B", "C", "D", "E"),

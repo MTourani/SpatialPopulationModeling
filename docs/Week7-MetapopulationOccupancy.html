@@ -445,7 +445,7 @@
   <meta name="generator" content="quarto-1.10.18">
 
   <meta name="author" content="Mahdieh Tourani">
-  <meta name="dcterms.date" content="2026-10-07">
+  <meta name="dcterms.date" content="2026-10-16">
   <title>Spatial Population Modeling – WILD 591 – Spatial Population Modeling</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -25204,7 +25204,7 @@ Mahdieh Tourani
 </div>
 </div>
 
-  <p class="date">2026-10-07</p>
+  <p class="date">2026-10-16</p>
 </section>
 <section>
 <section id="where-were-going" class="title-slide slide level1 center">
@@ -26434,6 +26434,22 @@ display:block!important;
 </section>
 <section id="implicit-vs-explicit-space" class="slide level2">
 <h2>Implicit vs explicit space</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a aria-hidden="true" tabindex="-1"></a><span class="co"># IMPLICIT: Only neighbourhood relations exist.</span></span>
+<span id="cb13-2"><a aria-hidden="true" tabindex="-1"></a>lattice <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, <span class="at">nrow =</span> <span class="dv">6</span>, <span class="at">ncol =</span> <span class="dv">6</span>)</span>
+<span id="cb13-3"><a aria-hidden="true" tabindex="-1"></a>lattice[<span class="dv">3</span>, <span class="dv">3</span>] <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb13-4"><a aria-hidden="true" tabindex="-1"></a><span class="fu">image</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">6</span>, </span>
+<span id="cb13-5"><a aria-hidden="true" tabindex="-1"></a>      <span class="dv">1</span><span class="sc">:</span><span class="dv">6</span>,</span>
+<span id="cb13-6"><a aria-hidden="true" tabindex="-1"></a>      lattice, </span>
+<span id="cb13-7"><a aria-hidden="true" tabindex="-1"></a>      <span class="at">col =</span> <span class="fu">c</span>(<span class="st">&quot;grey92&quot;</span>, <span class="st">&quot;firebrick&quot;</span>),</span>
+<span id="cb13-8"><a aria-hidden="true" tabindex="-1"></a>      <span class="at">xlab =</span> <span class="st">&quot;column (j)&quot;</span>, </span>
+<span id="cb13-9"><a aria-hidden="true" tabindex="-1"></a>      <span class="at">ylab =</span> <span class="st">&quot;row (i)&quot;</span>,</span>
+<span id="cb13-10"><a aria-hidden="true" tabindex="-1"></a>      <span class="at">main =</span> <span class="st">&quot;Implicit: who is adjacent to whom?&quot;</span>)</span>
+<span id="cb13-11"><a aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-12"><a aria-hidden="true" tabindex="-1"></a><span class="co"># Which cells are neighbours of (3,3)? Rook&#39;s case:</span></span>
+<span id="cb13-13"><a aria-hidden="true" tabindex="-1"></a>neighbours <span class="ot">&lt;-</span> <span class="fu">rbind</span>(<span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">3</span>), <span class="fu">c</span>(<span class="dv">4</span>,<span class="dv">3</span>), <span class="fu">c</span>(<span class="dv">3</span>,<span class="dv">2</span>), <span class="fu">c</span>(<span class="dv">3</span>,<span class="dv">4</span>))</span>
+<span id="cb13-14"><a aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(neighbours)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
 <aside class="notes">
 <p>Connect straight back to Figure 1.3. In the implicit representation, “distance” between (3,3) and (5,5) is a count of steps, not a measurement. The model has no access to metres.</p>
 <p>Ask what happens if cells are unequal in size or shape — the implicit representation quietly breaks, which is one motivation for going explicit.</p>
@@ -26452,6 +26468,17 @@ display:block!important;
 <section id="ex4" class="slide level2">
 <h2>Implicit space</h2>
 <p>In a grid, neighbours are defined by <strong>topology</strong>, not distance. Find the four rook neighbours of cell (3, 3) on a 6 × 6 grid.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a aria-hidden="true" tabindex="-1"></a>i <span class="ot">&lt;-</span> <span class="dv">3</span>; j <span class="ot">&lt;-</span> <span class="dv">3</span>; n <span class="ot">&lt;-</span> <span class="dv">6</span></span>
+<span id="cb14-2"><a aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-3"><a aria-hidden="true" tabindex="-1"></a>nb <span class="ot">&lt;-</span> <span class="fu">rbind</span>(<span class="fu">c</span>(i <span class="sc">-</span> <span class="dv">1</span>, j), <span class="fu">c</span>(i <span class="sc">+</span> <span class="dv">1</span>, j), <span class="fu">c</span>(i, j <span class="sc">-</span> <span class="dv">1</span>), <span class="fu">c</span>(i, j <span class="sc">+</span> <span class="dv">1</span>))</span>
+<span id="cb14-4"><a aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(nb) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;row&quot;</span>, <span class="st">&quot;col&quot;</span>)</span>
+<span id="cb14-5"><a aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-6"><a aria-hidden="true" tabindex="-1"></a><span class="do">## Drop any neighbour that falls off the 6 x 6 grid</span></span>
+<span id="cb14-7"><a aria-hidden="true" tabindex="-1"></a>inside <span class="ot">&lt;-</span> nb[, <span class="st">&quot;row&quot;</span>] <span class="sc">&gt;=</span> <span class="dv">1</span> <span class="sc">&amp;</span> nb[, <span class="st">&quot;row&quot;</span>] <span class="sc">&lt;=</span> n <span class="sc">&amp;</span></span>
+<span id="cb14-8"><a aria-hidden="true" tabindex="-1"></a>          nb[, <span class="st">&quot;col&quot;</span>] <span class="sc">&gt;=</span> <span class="dv">1</span> <span class="sc">&amp;</span> nb[, <span class="st">&quot;col&quot;</span>] <span class="sc">&lt;=</span> n</span>
+<span id="cb14-9"><a aria-hidden="true" tabindex="-1"></a>nb[inside, ]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
 <div class="hint webr-ojs-exercise exercise-hint d-none" data-exercise="ex4">
 <div class="callout callout-note callout-titled callout-style-default">
 <div class="callout-body">
@@ -26477,7 +26504,19 @@ display:block!important;
 <p><strong>Tip</strong></p>
 </div>
 <div class="callout-content">
-
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a aria-hidden="true" tabindex="-1"></a>i <span class="ot">&lt;-</span> <span class="dv">3</span>; j <span class="ot">&lt;-</span> <span class="dv">3</span>; n <span class="ot">&lt;-</span> <span class="dv">6</span></span>
+<span id="cb15-2"><a aria-hidden="true" tabindex="-1"></a>nb <span class="ot">&lt;-</span> <span class="fu">rbind</span>(<span class="fu">c</span>(i <span class="sc">-</span> <span class="dv">1</span>, j), <span class="fu">c</span>(i <span class="sc">+</span> <span class="dv">1</span>, j), <span class="fu">c</span>(i, j <span class="sc">-</span> <span class="dv">1</span>), <span class="fu">c</span>(i, j <span class="sc">+</span> <span class="dv">1</span>))</span>
+<span id="cb15-3"><a aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(nb) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;row&quot;</span>, <span class="st">&quot;col&quot;</span>)</span>
+<span id="cb15-4"><a aria-hidden="true" tabindex="-1"></a>inside <span class="ot">&lt;-</span> nb[, <span class="st">&quot;row&quot;</span>] <span class="sc">&gt;=</span> <span class="dv">1</span> <span class="sc">&amp;</span> nb[, <span class="st">&quot;row&quot;</span>] <span class="sc">&lt;=</span> n <span class="sc">&amp;</span></span>
+<span id="cb15-5"><a aria-hidden="true" tabindex="-1"></a>          nb[, <span class="st">&quot;col&quot;</span>] <span class="sc">&gt;=</span> <span class="dv">1</span> <span class="sc">&amp;</span> nb[, <span class="st">&quot;col&quot;</span>] <span class="sc">&lt;=</span> n</span>
+<span id="cb15-6"><a aria-hidden="true" tabindex="-1"></a>nb[inside, ]</span>
+<span id="cb15-7"><a aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-8"><a aria-hidden="true" tabindex="-1"></a><span class="do">## A corner cell has only two neighbours </span></span>
+<span id="cb15-9"><a aria-hidden="true" tabindex="-1"></a>i <span class="ot">&lt;-</span> <span class="dv">1</span>; j <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb15-10"><a aria-hidden="true" tabindex="-1"></a>nb2 <span class="ot">&lt;-</span> <span class="fu">rbind</span>(<span class="fu">c</span>(i <span class="sc">-</span> <span class="dv">1</span>, j), <span class="fu">c</span>(i <span class="sc">+</span> <span class="dv">1</span>, j), <span class="fu">c</span>(i, j <span class="sc">-</span> <span class="dv">1</span>), <span class="fu">c</span>(i, j <span class="sc">+</span> <span class="dv">1</span>))</span>
+<span id="cb15-11"><a aria-hidden="true" tabindex="-1"></a>nb2[nb2[, <span class="dv">1</span>] <span class="sc">&gt;=</span> <span class="dv">1</span> <span class="sc">&amp;</span> nb2[, <span class="dv">1</span>] <span class="sc">&lt;=</span> n <span class="sc">&amp;</span> nb2[, <span class="dv">2</span>] <span class="sc">&gt;=</span> <span class="dv">1</span> <span class="sc">&amp;</span> nb2[, <span class="dv">2</span>] <span class="sc">&lt;=</span> n, ]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
 </div>
 </div>
 </div>
@@ -26499,6 +26538,19 @@ display:block!important;
 </section>
 <section id="explicit-space-and-real-distances" class="slide level2">
 <h2>Explicit space and real distances</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a aria-hidden="true" tabindex="-1"></a><span class="co"># EXPLICIT: patches with coordinates and areas</span></span>
+<span id="cb16-2"><a aria-hidden="true" tabindex="-1"></a>patches <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb16-3"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">id   =</span> <span class="fu">c</span>(<span class="st">&quot;A&quot;</span>, <span class="st">&quot;B&quot;</span>, <span class="st">&quot;C&quot;</span>, <span class="st">&quot;D&quot;</span>, <span class="st">&quot;E&quot;</span>),</span>
+<span id="cb16-4"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">x    =</span> <span class="fu">c</span>(<span class="fl">1.0</span>, <span class="fl">3.4</span>, <span class="fl">2.2</span>, <span class="fl">4.6</span>, <span class="fl">1.6</span>),</span>
+<span id="cb16-5"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">y    =</span> <span class="fu">c</span>(<span class="fl">1.2</span>, <span class="fl">1.0</span>, <span class="fl">3.1</span>, <span class="fl">2.9</span>, <span class="fl">4.0</span>),</span>
+<span id="cb16-6"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">area =</span> <span class="fu">c</span>(<span class="dv">12</span>, <span class="dv">40</span>, <span class="dv">6</span>, <span class="dv">25</span>, <span class="dv">9</span>)</span>
+<span id="cb16-7"><a aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb16-8"><a aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-9"><a aria-hidden="true" tabindex="-1"></a><span class="co"># Full pairwise Euclidean distance matrix</span></span>
+<span id="cb16-10"><a aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">dist</span>(patches[, <span class="fu">c</span>(<span class="st">&quot;x&quot;</span>, <span class="st">&quot;y&quot;</span>)])</span>
+<span id="cb16-11"><a aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">as.matrix</span>(d), <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
 <div class="exercise">
 <p>Which two patches are closest? Which is most isolated on average? Try <code>rowMeans(as.matrix(d))</code>.</p>
 </div>

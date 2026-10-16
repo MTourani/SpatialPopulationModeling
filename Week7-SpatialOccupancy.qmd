@@ -1,0 +1,1192 @@
+---
+title: "WILD 591 – Spatial Population Modeling"
+subtitle: "Lesson 10: Spatial Occupancy Models"
+author: "Mahdieh Tourani"
+date: last-modified
+lang: en
+format:
+  live-revealjs:
+    self-contained: true
+    theme: [serif, wild541.scss]
+    slide-number: true
+    show-slide-number: all
+    scrollable: true
+    controls: true
+    width: 1050
+    height: 700
+    margin: 0.1
+engine: knitr
+title-slide-attributes:
+  data-background-image: "images/cover-ch1.jpg"
+  data-background-size: "30%"
+  data-background-position: "right 1px bottom 1px"
+editor: 
+  markdown: 
+    wrap: 72
+---
+
+{{< include ./_extensions/r-wasm/live/_knitr.qmd >}}
+
+# Where we're going {.center}
+
+## Roadmap for today
+
+1.  Occupancy framework
+2.  Spatial dynamic occupancy
+3.  Spatial co-occurrence model
+4.  Spatial dynamic co-ocurrence model
+
+# 1.1 Population modeling background {.center}
+
+## Structured populations
+
+> Populations, i.e., collections of interacting organisms of the same
+> species, have a variety of structures.
+
+-   Sexes: female and male
+
+-   Ages: newborn, yearlings, juveniles, adults
+
+-   Spatial and dynamic
+
+::: notes
+Populations, have a variety of interesting structures. For example,
+populations contain individuals of different ages ... sexes... and have
+age-sex structured.
+
+Another universal and fascinating characteristic of populations, which
+is the focus of this course is that they have spatial structures.
+meaning that we can always find more or fewer individuals in some areas
+than in other areas, while sometimes we might find none at all.
+
+On top of that, spatial structures are dynamic, meaning that they change
+over time
+
+An area with none of a species in a year may have a few individuals of
+that species in the next year
+
+The underlying processes are spatially structured population dynamics:
+BIDE
+:::
+
+## Demography
+
+$$\Delta N = B + I - D - E$$
+
+Spatially structured population dynamics and underlying prcesses are
+driven by heterogeneity and dynamics of abiotic, as well as intra- and
+inter-specific interactions.
+
+![](images/sifaka.GIF){fig-align="center" width="50%"}
+
+::: notes
+The processes underlying spatially structured population dynamics are
+called BIDE
+
+These are demographic and dispersal processes that determine changes in
+population size
+
+E and I are called dispersal movement or movement
+
+READ then:
+
+understanding spatially structured population dynamics has been very
+challenging to ecologists, partly due to our inability to obtain
+“complete” observations of populations at relevant spatial and temporal
+scales.
+
+For example, we might mistakenly think that an area was not used by a
+skink species (or say the local population size of the skink was 0 for
+that area) simply because the two little skinks living in that area
+happened to be hiding under a rock when we were trying to find them
+during the survey of the area. Or, we could be unsure if a sifaka was
+dead or alive, and if it was alive, where it was, after we captured it
+for the last time. Without complete observations about populations,
+ecologists heavily rely on statistical models to estimate the
+whereabouts, numbers, birth, death, and movement of organisms from
+partial observations (i.e., data). Nowadays, these statistical models
+become more and more complex to satisfy our curiosity about natural
+populations and their complexity, making these models challenging to
+build and compute.
+:::
+
+## Previously
+
+> Metapopulation is defined as a set of connected local populations that
+> persist in a balance between local extinctions and colonization.
+
+The concept has been generalized to any spatially structured population
+that inhabits heterogeneous habitats.
+
+-   As oposed to classic metapopulation models, modern statistical
+    models account for imperfect detection.
+
+::: notes
+If we look at the history of spatial population modeling, it roots back
+into metapopulation models. While the concept of metapopulation tends to
+be constrained to local populations that inhabit patchy habitats and
+have a high rate of turnover (i.e., extinctioncolonization; Hanski and
+Gilpin 1997, p. 9), later it has been generalized to any spatially
+structured populations that can inhabit patchy to continuous habitats
+(as long as the habitat is heterogeneous) and have any rate of turnover,
+even including the situation without any turnover at all. Another
+distinction between “classic” metapopulation models and “modern”
+statistical models is that, while
+:::
+
+# 1.2 Occupancy framework {.center}
+
+## Imperfect Detection
+
+-   **Raw Observations vs Latent Reality**:
+    -   $y_{ijt} = 0$ can mean **True Absence** ($z_{it} = 0$) OR
+        **Non-Detection** ($z_{it} = 1, p < 1$).
+    -   Naive raw proportion of occupied sites
+        ($\hat{\psi}_{\text{naive}}$) severely underestimates true
+        occupancy.
+-   **False Negative Probability**: $(1 - p)^J$, where $J$ is the number
+    of secondary visits.
+-   **Biological Consequence**: Masking population declines, range
+    contractions, and extinction events.
+
+::: notes
+How? by separating observations from the true ecological process in a
+hierachical framework.
+
+modern statistical models can be considered the generalized forms of
+classic metapopulation models in terms of both their ecological realism
+and statistical elegance.
+
+Such generalization is undoubtedly thanks to the broad application of
+Geographic Information System (GIS) and synthesis of metapopulation
+ecology and landscape ecology (Howell et al. 2018; Royle et al. 2018).
+
+Next, we will talk about the evolution of mathematical and statistical
+models that have been developed and used to understand metapopulations
+and more generally spatially structured populations over the last half
+century.
+:::
+
+## Static Occupancy Model
+
+-   **Process Sub-model**:
+    $$z_i \sim \text{Bernoulli}(\psi_i), \quad \text{logit}(\psi_i) = \mathbf{X}_i \boldsymbol{\beta}$$
+-   **Observation Sub-model**:
+    $$y_{ij} | z_i \sim \text{Bernoulli}(z_i p_{ij}), \quad \text{logit}(p_{ij}) = \mathbf{W}_{ij} \boldsymbol{\alpha}$$
+-   **Assumptions**:
+    1.  Closure: Occupancy state $z_i$ is constant across
+        $j = 1, \dots, J$ visits.
+    2.  Independence of detections conditional on $z_i$.
+    3.  No false positives ($P(y=1 | z=0) = 0$).
+
+::: notes
+We talked about static occupancy models as a basic model with two
+submodels.
+
+Occupancy is probably the simplest way to measure population status and
+thus provides limited information for the spatial structures and
+dynamics of populations. Occupancy status, which is often represented by
+1’s (presence) and 0’s (absence), is a reduced form of abundance in the
+sense that the study species will be considered present at a site as
+long as there is at least one individual of the species at that site
+(i.e., local abundance ≥1), and absent only when there is no individual
+at all at that site (i.e., local abundance = 0).
+:::
+
+## Dynamic Occupancy Model
+
+-   **Initial State** ($t = 1$):
+    $$z_{i,1} \sim \text{Bernoulli}(\psi_{i,1})$$
+-   **State Transitions** ($t > 1$):
+    $$z_{i,t} | z_{i,t-1} \sim \text{Bernoulli}\left( z_{i,t-1} \phi_{i,t-1} + (1 - z_{i,t-1}) \gamma_{i,t-1} \right)$$
+-   **Parameters**:
+    -   $\psi_1$: Initial occupancy probability
+    -   $\phi_{i,t-1}$: Persistence probability ($1 - \epsilon_{i,t-1}$)
+    -   $\gamma_{i,t-1}$: Colonization probability
+-   **Observation submodel** for primary period $t$ and secondary visit
+    $j \in \{1, \dots, J_{i,t}\}$:
+    $$y_{ijt} | z_{it} \sim \text{Bernoulli}(z_{it} p_{ijt})$$
+
+::: notes
+By specifying that occupancy status is only a function of environmental
+conditions at the same time (although time is not specified in the model
+and thus is only implied), the model basically assumes that species
+occupancy always tracks environmental changes instantaneously (or there
+is no environmental change at all). However, this is hardly the case in
+reality, as the state of a population at a given time is arguably always
+related to its status in the past, and it normally takes some time for a
+population to respond to environmental changes. The dynamic occupancy
+model (MacKenzie et al. 2003; Royle and Kéry 2007) deals with such an
+issue by modeling changes in occupancy as a function of covariates,
+rather than linking occupancy to covariates directly (except for the
+first year). The dynamic occupancy model is a model for discrete time
+steps (also called primary occasions), and these time steps in practice
+are often years, or breeding seasons. But note that the time steps
+necessary to describe occupancy dynamics in an adequate manner will have
+to be adapted to the life-cycle of a study species: a time step may be 1
+day for a metapopulation of some damselfly species or successive 10
+years for a tree species.
+
+Dynamic occupancy models (MacKenzie et al. 2003; Royle and Kéry 2007)
+further explain the temporal changes of occupancy status with local
+extinction (change from 1 to 0) and colonization (change from 0 to 1),
+which again is a reduced form of the BIDE processes in the sense that a
+local population goes extinct when all individuals at that site either
+die (D) or emigrate (E) without giving birth (B) to any new individual,
+and an unoccupied site is colonized when at least one individual
+immigrates (I) into this site. Despite the limited information occupancy
+models can provide, they are nonetheless one of the most broadly used
+family of models in population ecology, due to the relative ease with
+which detection/non-detection data can be collected.
+
+The process sub-model first describes the initial occupancy status
+(i.e., occupancy at the first year) using basically Eq. (2.1) for the
+static occupancy model; however, now z, ψ and x’s are all indexed by 1
+to indicate that they are for t = 1.
+
+From the second year (i.e., t ≥ 2), the model assumes that a site that
+is occupied in year t has a probability of remaining occupied in year
+t + 1 (persistence, the opposite of extinction), and a site that is
+unoccupied in year t has a probability to become occupied in year t + 1
+(colonization). Furthermore, in the model we can specify persistence and
+colonization probabilities as functions of covariates. Using our little
+butterfly as an example, instead of assuming that the butterfly is more
+likely to live in a larger meadow, we now assume that when the butterfly
+lives in a meadow, it is more likely to continue living there the next
+year if the meadow is larger, and when the butterfly does not live in a
+meadow, they are more likely to move into that meadow next year if the
+meadow is larger, and vice versa.
+:::
+
+```{=html}
+<!--
+## Example: static occupancy model
+
+::: notes
+This is an example static occupancy model. It's a hierarchical model
+with two submodels, one ecological process, the occupancy state and the
+other one is observation submodel. also prior distributions of the
+paramters
+
+The process sub-model assumes that the true occupancy status or
+presence/ absence of a species follows a Bernoulli distribution with a
+success probability that is a function of covariates
+
+The observation sub-model has two main assumptions. First, it assumes
+that the nreps visits for each site i are made over a time period that
+is short enough so that zi does not change among the visits. This is
+consistent with the closed population assumption we described earlier in
+Sect. 2.1 in the sense that, the longer the time period is, the larger
+the territory of the species is likely to be, and eventually a site can
+no longer contain the territory of the study species. Having multiple
+visits to a site during a period of closed population such as a breeding
+season is called the robust sampling design
+:::
+-->
+```
+
+## Where to from here
+
+-   Static occupancy models consider neither space nor time
+
+-   Dynamic occupancy models consider the temporal aspect but not
+    spatial dependence between sites
+
+-   Co-occurrence models
+
+::: notes
+Today we gradually add to the realism of these ecological models, we
+address both temporal and spatial aspect of population status, but also
+include species co-occurrence models.
+
+The dynamic occupancy model I showed you only allows the parameters,
+persistence, and colonization, to be functions of local environmental
+covariates but not occupancy status at other sites.
+
+In that sense, the dynamic occupancy model is non-spatial because the
+occupancy dynamics at a given site are unrelated to that at any other
+site, making the spatial configuration of the sites irrelevant.
+
+This is obviously unrealistic and misses something very important, as we
+have learned from all those metapopulation studies that population
+dynamics at a site are driven not only by the environmental conditions
+of that given site but also the connectivity (i.e., probability of
+moving) between that site and other sites (Hanski 1998). For instance,
+one might imagine that a site nearer an occupied site may have a higher
+probability of being occupied than one that is further away, simply
+because the potential of exchanging animals from the nearer site is
+higher. Therefore, spatial dynamic occupancy models have been developed
+to account for connectivity among sites.
+:::
+
+# 2.1 Spatial Dynamic Occupancy Models
+
+## Spatial component
+
+-   **Non-Spatial Limitation**: classic dynamic occupancy assumes
+    colonization $\gamma_{it}$ is independent of occupancy at
+    neighboring sites.
+-   **Spatial Autocorrelation in Dynamics**:
+    -   A site near occupied sites has a higher colonization
+        probability.
+-   **Spatial Colonization Model**:
+    $$z_{i,1} \sim \text{Bernoulli}(\psi_{i,1})$$
+    $$z_{i,t} | z_{i,t-1} \sim \text{Bernoulli}\left( z_{i,t-1} \phi_{i,t-1} + (1 - z_{i,t-1}) \gamma_{i,t-1} \right)$$
+    $$\gamma_{i,t-1} = f\left( \mathbf{X}_i, \text{Connectivity}(i, \mathbf{z}_{t-1}) \right)$$
+
+::: notes
+Transition from non-spatial dynamic occupancy to spatially explicit
+dynamic occupancy models. Colonization at a site is related to the
+occupancy status at other sites based on their connectivity with this
+site. The simplest way of specifying connectivity is to assume that only
+adjacent sites (also called neighbors) are connected.
+
+The difference is the spatial dynamic occupancy model assumes that
+colonization at an unoccupied site, γi, t - 1, is influenced by the
+occupancy status of other sites given the connectivity between these
+sites; the connectivity can further be a function of adjacency or
+distance between these sites as well as environmental conditions in
+these sites. The first part of the process sub-model of spatial dynamic
+occupancy models describes the initial occupancy status of a species as
+a function of covariates such z_i1 and psi_i1 the same as before.
+
+The second part of the process sub-model describes the inter-annual
+transitions of occupancy status, and again assumes that occupancy after
+the first year is driven by persistence and colonization, and
+persistence is a function of covariates
+
+Spatial dynamic occupancy models also have an observation sub-model that
+links detection/non-detection data to the true occupancy status given
+some observation covariates.
+:::
+
+## Autologistic model: Logit-linear
+
+Colonization/persistence at site *i* is a function of site *i*'s
+neighborhood, i.e., how much of site *i*'s neighbourhood was occupied
+last year.
+
+-   **Logit-linear Autocovariate**: $$
+    \begin{aligned}
+    \color{#0d5f55}{A_{i,t-1}} &\color{#0d5f55}{= \frac{1}{n_i}\sum_{j \sim i} z_{j,t-1}}
+    && \text{}\\[6pt]
+    \text{logit}(\gamma_{i,t-1}) &= a^{\gamma}_0 + a^{\gamma}_1 x_i + \color{#0d5f55}{b^{\gamma}\, A_{i,t-1}}\\[6pt]
+    \end{aligned}
+    $$
+
+$n_i$: Number of neighbours of site $i$ (3, 5 or 8 on a square grid with
+a queen's neighbourhood).
+
+$A_{i,t-1}$: The *proportion* of site $i$'s neighbours that were
+occupied in year $t-1$.
+
+$b^{\gamma}$: Effect of that local density on colonisation, on the logit
+scale. Positive $b^{\gamma}$ is the signature of distance-limited
+spread.
+
+$a^{\gamma}_0$ : Baseline colonisation when no neighbours are occupied —
+i.e. long-distance colonisation from outside the neighbourhood.
+
+::: notes
+$A_{i,t-1}$ is a covariate like any other, with one crucial difference:
+**it is a function of the latent state**. You do not observe it; the
+model estimates it. AHM2 is pointed about this. Some authors plug in the
+*observed* proportion of occupied neighbours, which is biased by
+imperfect detection.
+
+$j \sim i$: $j$ is a neighbour of $i$, under whatever neighbourhood you
+defined. $n_i$: Number of neighbours of site $i$ (3, 5 or 8 on a square
+grid with a queen's neighbourhood). $A_{i,t-1}$: The **autocovariate**:
+the *proportion* of site $i$'s neighbours that were occupied in year
+$t-1$. Bounded in $[0,1]$. Read it as "the local density of potential
+colonists — or rescuers — around site $i$." $b^{\gamma}$: Effect of that
+local density on colonisation, on the logit scale. Positive $b^{\gamma}$
+is the signature of distance-limited spread. $b^{\phi}$: Effect on
+persistence. Positive $b^{\phi}$ is the **rescue effect**: a population
+near other occupied sites is less likely to blink out, because
+immigrants keep topping it up. $a^{\gamma}_0$ : Baseline colonisation
+when no neighbours are occupied — i.e. long-distance colonisation from
+outside the neighbourhood.
+
+Computing the autocovariate from $z$ inside the model is the entire
+point.
+
+The neighbourhood size is a modelling choice that should reflect the
+species' dispersal distance. AHM2 suggests trying several and inferring
+dispersal from the one that fits best, or that yields the strongest
+autocovariate effects.
+
+The initial state, and the state transitions, and the observation
+submodel are the same as nonspatial. For a continuous habitat, adjacency
+can be defined as the case where two sites (polygons) share some of
+their boundaries. For a patchy habitat such as the one we consider in
+this book, adjacency can be defined as the case where two sites are
+within a given distance. When adjacency is defined, the model assumes
+that an unoccupied site can be colonized only if any of its adjacent
+sites are occupied, and the probability of colonization is higher when
+more of its adjacent sites are occupied.
+
+AHM2 is explicit that the two mechanisms producing spatial
+autocorrelation — an omitted spatially structured covariate, and a
+biotic process like dispersal — "can yield exactly the same spatial
+patterns," so you cannot normally tell them apart from a static pattern.
+What you *can* do is write down a model whose parameters mean what you
+want them to mean, and be clear about which you chose.
+:::
+
+## Autologistic model: adjacency indicator
+
+-   **Autologistic Transition Form**: $$
+    \gamma_{i,t-1} \;=\; 1 \;-\; \big(1-\zeta\big)^{\textstyle\sum_{i'} a_{i,i'}\, z_{i',t-1}} \times \big(1-\delta\big)
+    $$ $a_{i,i'}$: Binary adjacency indicator, 1 if sites $i$ and $i'$
+    are adjacent, 0 otherwise.
+
+$\zeta$: Probability of colonisation contributed by **one** occupied
+neighbour.
+
+$\delta$: Probability of colonisation from **non-adjacent** sites
+(long-distance movement)
+
+::: notes
+Read it as a failure-to-colonise product. Each occupied neighbour
+independently fails to colonise site $i$ with probability $1-\zeta$; $k$
+occupied neighbours all fail with probability $(1-\zeta)^k$;
+
+long-distance colonisation independently fails with probability
+$1-\delta$. One minus the product of all those failures is the
+probability that *something* succeeded.
+
+$a_{i,i'}$: Binary adjacency indicator, 1 if sites $i$ and $i'$ are
+adjacent, 0 otherwise.
+
+$\sum_{i'} a_{i,i'} z_{i',t-1}$: The **count** of occupied adjacent
+sites in year $t-1$ (not the proportion)
+
+$\zeta$: Probability of colonisation contributed by **one** occupied
+neighbour.
+
+$\delta$: Probability of colonisation from **non-adjacent** sites
+(long-distance movement)
+
+This is better than Formulation A: - With zero occupied neighbours,
+$\gamma = \delta$ exactly. The baseline is a named, interpretable
+parameter rather than a logit intercept. - $\gamma$ is monotone
+increasing in the number of occupied neighbours and automatically
+bounded in $[0,1]$ — no link function needed.
+:::
+
+## Distance-Based Movement
+
+-   The definition of adjacency can be arbitrary if sites are not
+    naturally adjacent to each other in patchy habitats.
+
+-   It may be an oversimplification to assume that only adjacent sites
+    are connected.
+
+-   More realistic to assume that connectivity between two sites is
+    related to their distance, typically with a negative relationship.
+
+::: notes
+Imagine a butterfly population, if the species does not live in a meadow
+in a year, it has a better chance to move into this meadow from a closer
+meadow than from a more distant one if they live in both. At the end of
+the day, whether the butterfly will move into a meadow or not depends on
+the number of meadows they live in and the distance from these meadows
+to the empty meadow.
+:::
+
+## Distance-Based Dispersal Kernels
+
+-   **Standardized Connectivity Weight**: $$
+    \begin{aligned}
+    \color{#0d5f55}{\eta_{i,i'}} &\color{#0d5f55}{= \exp\!\left(-\kappa\, d_{i,i'}\right)}
+     && \text{unstandardised colonisation rate}\\[6pt]
+    \color{#0d5f55}{\theta_{i,i'}} &\color{#0d5f55}{= \frac{\eta_{i,i'}}{\sum_{i''=1}^{M}\eta_{i,i''}}}
+     && \text{standardised colonisation rate}\\[6pt]
+    \end{aligned}
+    $$
+
+$d_{i,i'}$: Distance between sites $i$ and $i'$. Note $d_{i,i} = 0$, so
+a site contributes to itself with weight $\eta = 1$.
+
+$\kappa$: **Decay parameter**. Large $\kappa$ means colonisation falls
+off fast with distance — a poor disperser. $\kappa \to 0$ means every
+site contributes equally and space stops mattering.
+
+$\eta_{i,i'}$: Raw kernel weight, in $(0,1]$. Equals 1 at zero
+distance.\
+$\theta_{i,i'}$: Kernel weight normalised so that
+$\sum_{i'} \theta_{i,i'} = 1$ for every $i$.
+
+$\gamma_{i,t-1}$: Colonisation probability — a **weighted average of the
+occupancy states**, with weights that decay with distance.
+
+-   **Colonization Probability**:
+    $$\gamma_{i, t-1} = \sum_{i'=1}^{M} \theta_{i,i'}\, z_{i',t-1}$$
+
+::: notes
+The neighbourhood disappears. Instead of a sharp cutoff — in or out —
+every site in the landscape contributes to the colonisation of every
+other site, weighted by a **dispersal kernel** that decays with
+distance.
+
+To specify the relationship between colonization probability and
+distance, we often use something called a decay function, i.e., a
+monotone declining function of distance. Here we use a simple and widely
+used decay function, which is
+
+in which θi1,i2 is a parameter representing (standardized) colonization
+rate between sites i1 and i2, ηi1,i2 is unstandardized colonization
+rate, and κ is a decay parameter governing the relationship between
+colonization and distance, denoted di1,i2 . A larger κ represents a more
+rapid rate of decay, meaning that the colonization rate decreases faster
+with increasing distance, and vice versa
+
+The normalisation is doing elegant work. Because each row of
+$\boldsymbol{\theta}$ sums to one, $\gamma_{i,t-1}$ is a convex
+combination of zeros and ones and therefore lies in $[0,1]$
+automatically. No link function, no risk of an invalid probability. Read
+it as: *the colonisation probability of site* $i$ is the
+distance-weighted proportion of the landscape that was occupied.
+:::
+
+## Combined Distance- and Environment-Based Movement
+
+-   Dispersal depends on both geographic distance $d_{i,i'}$ AND habitat
+    quality at source/target sites:
+
+$$
+\begin{aligned}
+\color{#0d5f55}{\gamma_{i,t-1}} &\color{#0d5f55}{=
+\underbrace{\text{logit}^{-1}\!\left(\beta^{[\gamma]}_0 + \beta^{[\gamma]}_1 x_{i,t,1} + \dots\right)}_{\text{local suitability}}
+\;\times\;
+\underbrace{\sum_{i'=1}^{M}\theta_{i,i'}\, z_{i',t-1}}_{\text{connectivity}}}\\[8pt]
+\theta_{i,i'} &= \frac{\eta_{i,i'}}{\sum_{i''}\eta_{i,i''}}, \qquad
+\eta_{i,i'} = \exp(-\kappa\, d_{i,i'})
+\end{aligned}
+$$ **Local suitability**: how good a destination site $i$ is, given its
+own covariates.
+
+**Connectivity**: how much occupied habitat is within dispersal reach.
+
+::: notes
+More realistically, ... (Sutherland et al. 2012; Drake et al. 2022).
+Imagine an area with just three meadows, where our butterfly lives in
+one of them but not the other two. Also, imagine that the two empty
+meadows are equally far from the meadow that the species live in, but
+one empty meadow is much larger than the other. Based on the model
+introduced in Sect. 2.4.2, the chance that the butterfly will move into
+either of these empty meadows is the same. However, here we want to
+consider the case when the butterfly is more likely to move into the
+larger empty meadow.
+
+with initial occupancy, persistence and the observation sub-model
+exactly as in Module 6.
+
+**Local suitability**: how good a destination site $i$ is, given its own
+covariates. In $(0,1)$. **Connectivity**: how much occupied habitat is
+within dispersal reach. In $[0,1]$ by the row-normalisation.
+
+Both factors lie in $(0,1)$, so their product does too. Colonisation
+requires *both* that colonists arrive *and* that the destination is
+habitable.
+
+The multiplicative form encodes a genuine ecological claim: **arrival
+and establishment are separate events, and both must succeed.** A
+perfectly suitable site that nothing can reach is not colonised
+($\text{connectivity} \approx 0$). A site surrounded by occupied habitat
+but hostile is not colonised either ($\text{suitability} \approx 0$).
+That is more than a modelling convenience — it is the distinction
+between dispersal limitation and habitat limitation, and this model lets
+you estimate which one is binding.
+:::
+
+# 2.2 Spatial Co-occurrence Model
+
+## Co-occurrence
+
+Coexistence of interacting species has long been a focus in
+metapopulation studies (Hanski and Gilpin 1997; Hanski 1998)
+
+-   Occupancy status of a species is influenced by its abiotic
+    environment and the presence or absence of other interacting
+    species.
+
+-   Species colonization/persistence is influenced by its abiotic
+    environment and the presence or absence of other interacting
+    species.
+
+::: notes
+Understanding the coexistence of interacting species has long been a
+focus in metapopulation studies.
+
+In this case, the occupancy status of a species is influenced not only
+by its abiotic environment but also by the presence or absence of other
+interacting species.
+
+For example, competition and predator–prey interactions can influence
+persistence and colonization, and thus the stability of local
+populations (Bengtsson 1989; Bonsall et al. 2002). The capability of
+moving among habitat patches is also key for metapopulation stability
+:::
+
+## Spatial Dynamic Co-occurrence Model
+
+-   **Interspecific Interactions**: Modeling co-occurrence dynamics of
+    species $s \in \{1, \dots, S\}$.
+-   **Latent States**: $z_{i,t,s} \in \{0, 1\}$ for species $s$ at site
+    $i$, year $t$.
+-   **Interaction Mechanisms**:
+    -   Predator presence ($z_{i,t-1, \text{pred}} = 1$) reduces prey
+        persistence $\phi_{i,t-1,\text{prey}}$ and colonization
+        $\gamma_{i,t-1,\text{prey}}$.
+    -   Prey presence increases predator persistence and colonization.
+
+::: notes
+Multispecies extension incorporates competitive or predator-prey state
+dependencies.
+:::
+
+## Predator-Prey Prsistence
+
+-   **Prey Persistence**:
+    $$\text{logit}(\phi_{i,t-1,\text{prey}}) = \beta_0^{(\phi,\text{prey})} + \beta_{\text{pred}}^{(\phi,\text{prey})} \times z_{i,t-1,\text{pred}} + \mathbf{X}_i \boldsymbol{\beta}$$
+-   **Predator Persistence**:
+    $$\text{logit}(\phi_{i,t-1,\text{pred}}) = \beta_0^{(\phi,\text{pred})} + \beta_{\text{prey}}^{(\phi,\text{pred})} \times z_{i,t-1,\text{prey}} + \mathbf{X}_i \boldsymbol{\beta}$$
+-   Expected Signs: $\beta_{\text{pred}}^{(\phi,\text{prey})} < 0$ (prey
+    suppressed) and $\beta_{\text{prey}}^{(\phi,\text{pred})} > 0$
+    (predator supported).
+
+::: notes
+Equations governing interspecific state-dependent turnover.
+:::
+
+## Case Study: Ant vs Butterfly Meadow Metapopulation
+
+-   **System**: Invasive ant (*Myrmica*) vs native lycaenid butterfly.
+-   **Hypothesis**: Ant presence induces local extinction of butterfly
+    caterpillar patches.
+-   **Dynamic Occupancy Estimates**:
+    -   Butterfly persistence $\phi_{\text{butterfly}}$ drops from
+        $0.85$ (ant absent) to $0.22$ (ant present).
+    -   Butterfly colonization $\gamma_{\text{butterfly}}$ reduced by
+        $65\%$ in ant-dominated meadows.
+
+::: notes
+Empirical illustration of competitive exclusion in dynamic occupancy.
+:::
+
+::: notes
+Here, we consider a model in which persistence and colonization of one
+species are functions of abiotic environmental covariates as well as
+occupancy of other species. For illustration, imagine that our little
+butterfly lives in the same area as some ant species that is a fierce
+predator of the butterfly. If the butterfly lives in a meadow, it will
+be less likely to continue living there if the ant also lives in the
+same meadow (because all of the butterflies may simply be eaten!).
+Conversely, if the ant lives in a meadow, it will be more likely to
+continue living there if the butterfly is there (because the ant gets to
+eat the butterfly). Meanwhile, we can also imagine that the butterfly is
+less likely to move into a meadow where the ant lives in, and the ant is
+more likely to move into a meadow if the butterfly is there. Using
+statistical language, we have the following for the first year: in which
+zi, 1, s is the occupancy status of species s at site i and year 1, ψi,
+1, s is the initial occupancy probability, and β ½ \] 0 ∙ ,s’s are
+species-specific intercepts and slopes governing the effects of
+covariates (x’s) on initial occupancy. Here, if we consider a system
+with two species (i.e., nspec = 2), we will have s = ant or butterfly.
+From the second year, we have
+:::
+
+# 3.1 Simulations
+
+## Simulate the orchid network
+
+![](images/orchid.jpg){width="40%"}
+
+```{r}
+#| fig-width: 8.6
+#| fig-height: 6.4
+#| echo: true
+set.seed(1010)
+n_p <- 841                        # patches
+
+# patches scatter along a sinuous river channel, in metres
+tt <- sort(runif(n_p, 0, 1))
+rx <- 300 * tt + rnorm(n_p, 0, 6)
+ry <- -300 * tt + 40 * sin(8 * tt) + rnorm(n_p, 0, 6)
+rz <- 60 * tt + rnorm(n_p, 0, 2)          # elevation gradient along the river
+
+area <- round(rlnorm(n_p, log(35), 1.0), 1)     # moss area, cm2
+area <- pmin(area, 650)
+
+# 3-D distance
+dmat <- as.matrix(dist(cbind(rx, ry, rz)))
+
+meandist <- 4.8             # mean seed dispersal, m (Tremblay 1997)
+alpha <- 1 / meandist
+
+plot(rx, 
+     ry,
+     pch = 21,
+     bg = "grey85",
+     cex = log(area + 1) / 3,
+     xlab = "x (m)", 
+     ylab = "y (m)", 
+     asp = 1,
+     main = "841 moss patches along the river; symbol size ~ log(area)")
+c(patches = n_p,
+  mean_area = round(mean(area), 1),
+  max_area = max(area), 
+  alpha = round(alpha, 3))
+```
+
+::: notes
+Lepanthes rupestris is a small wind-dispersed orchid, leaves 1.3 to 4.3
+cm, flowers under 6 mm, that anchors its roots in moss patches on
+boulders (epilithic) or tree trunks (epiphytic) along streams in the
+Luquillo Mountains, Puerto Rico. Rocks tend to have larger populations
+and higher occupancy than trees.
+
+The sampling design is worth noting for its cleverness. 250 occupied
+patches were identified first, then unoccupied patches were found by
+randomly selecting three suitable moss-covered patches with no
+individuals within a 5 m radius of each occupied patch. That gives you
+unoccupied patches that are genuinely SUITABLE, which is what you need
+to estimate colonization.
+
+Note the THREE-DIMENSIONAL distance. The patches sit along a steep
+elevation gradient, and dist() takes x, y and z without complaint. Most
+connectivity work ignores the vertical dimension; along a mountain
+stream that is a real omission.
+
+Mean seed dispersal is 4.8 m, so alpha is about 0.21 -- a severely
+dispersal- limited organism, which is exactly why the metapopulation
+framing fits.
+:::
+
+## Simulate occupancy dynamics
+
+```{r}
+#| echo: true
+# TRUTH
+b_psi   <- c(int = -2.899, area = 0.562, S = 0.185)
+b_eps   <- c(int = -1.21,  area = -0.62)
+logit_g <- -4.14                       # colonization, constant
+p_det   <- 0.843                       # per-survey detection
+
+n_prim <- 5; n_sec <- 2
+logarea <- log(area + 1)
+
+# connectivity S_i, ignoring occupancy 
+gker <- exp(-alpha * dmat); diag(gker) <- 0
+S <- as.vector(gker %*% area)
+Sz <- as.numeric(scale(S))             # centres and scales S
+
+psi1 <- plogis(b_psi["int"] + b_psi["area"] * logarea + b_psi["S"] * Sz)
+eps  <- plogis(b_eps["int"] + b_eps["area"] * logarea)
+gam  <- plogis(logit_g)
+
+set.seed(1011)
+z <- matrix(NA_integer_, n_p, n_prim)
+z[, 1] <- rbinom(n_p, 1, psi1)
+for (t in 2:n_prim) {
+  pr <- z[, t - 1] * (1 - eps) + (1 - z[, t - 1]) * gam
+  z[, t] <- rbinom(n_p, 1, pr)
+}
+
+# observation: two secondary surveys per primary period
+y <- matrix(NA_integer_, n_p, n_prim * n_sec)
+for (t in 1:n_prim) for (j in 1:n_sec) {
+  y[, (t - 1) * n_sec + j] <- rbinom(n_p, 1, z[, t] * p_det)
+}
+
+# Counts as well as occupancy: holds abundance N, and
+# the synchrony analysis needs a series with variance. A purely binary series
+# from a patch that never changes state has sd = 0.
+lamN <- exp(0.4 + 0.35 * logarea)          # expected count when occupied
+N <- matrix(0L, n_p, n_prim)
+for (t in 1:n_prim) N[, t] <- as.integer(z[, t] * rpois(n_p, lamN))
+
+c(ever_occupied_true = sum(rowSums(z) > 0),
+  ever_detected = sum(rowSums(y) > 0),
+  detections = sum(y), non_detections = sum(y == 0),
+  detection_rate = round(mean(y), 3),
+  psi_star_expected = round(mean(gam / (gam + eps)), 3),
+  mean_count_when_occupied = round(mean(N[z == 1]), 1))
+```
+
+::: notes
+Everything here is generated from the book's own estimates, so Lab D can
+be scored against a known truth.
+
+Check the printed numbers against theirs. They report 1969 detections
+and 6641 non-detections, a detection rate of 0.229, 266 patches ever
+occupied, and an equilibrium psi\* of 0.31. Ours should be in the same
+neighbourhood.
+
+Two things worth pointing at in the loop. The transition line
+
+pr \<- z\[, t-1\] \* (1 - eps) + (1 - z\[, t-1\]) \* gam
+
+IS equation 10.19 -- the switch we discussed. And note
+EVER_OCCUPIED_TRUE versus EVER_DETECTED: the gap is the patches that
+were occupied and never detected. With p = 0.843 and ten surveys that
+gap should be tiny, which is why the book's detection correction changes
+little here.
+
+Note also colonization is CONSTANT while extinction depends on area.
+That is the book's best-supported model, and it means the area-isolation
+paradigm only half holds in this system -- area drives extinction,
+isolation does not measurably drive colonization.
+:::
+
+```{r}
+library(unmarked)
+site_cov <- data.frame(logarea = logarea, Sz = Sz)
+
+# a survey-level covariate: day of year, standardised
+set.seed(1012)
+date_mat <- matrix(scale(as.vector(
+  outer(rep(1, n_p), rep(c(40, 210), n_prim)) + rnorm(n_p * n_prim * n_sec, 0, 8)
+))[, 1], n_p, n_prim * n_sec)
+
+# implicit-dynamics frame: stack primary periods as if independent
+y_stack   <- do.call(rbind, lapply(1:n_prim,
+                     function(t) y[, (t - 1) * n_sec + 1:n_sec]))
+cov_stack <- do.call(rbind, replicate(n_prim, site_cov, simplify = FALSE))
+dat_stack <- do.call(rbind, lapply(1:n_prim,
+                     function(t) date_mat[, (t - 1) * n_sec + 1:n_sec]))
+
+umf_occ <- unmarkedFrameOccu(y = y_stack, siteCovs = cov_stack,
+                             obsCovs = list(date = dat_stack))
+
+# dynamic frame: all 10 surveys, 5 primary periods
+umf_dyn <- unmarkedMultFrame(y = y, siteCovs = site_cov,
+                             obsCovs = list(date = date_mat),
+                             numPrimary = n_prim)
+c(stacked_rows = nrow(y_stack), dynamic_sites = numSites(umf_dyn))
+```
+
+::: notes
+Two frames because we fit two kinds of model.
+
+The IMPLICIT-DYNAMICS frame stacks the five primary periods on top of
+each other and treats them as independent sites. That estimates AVERAGE
+occupancy over time and ignores colonization and extinction entirely.
+The book does this first and is explicit about the compromise: this is
+repeated measures treated as independent samples, and unmarked cannot
+easily fit random effects, so proceed with caution. Bayesian approaches
+handle it properly (Rota et al. 2011).
+
+The DYNAMIC frame keeps the structure: 841 sites, 10 surveys, 5 primary
+periods. numPrimary is what tells unmarked where the primary boundaries
+are.
+
+On reshaping: real data arrive long, and you would reshape with
+reshape2::dcast or base R. The base equivalent is one line --
+xtabs(presence \~ siteID + survey_number, data = surveys) -- which is
+worth knowing since reshape2 is superseded.
+:::
+
+# 3.2 Fit occupancy models
+
+## First, ignore the dynamics
+
+```{r}
+#| message: false
+#| echo: true
+m_p_null <- occu(~ 1 ~ 1, umf_occ)
+m_p_date <- occu(~ date ~ 1, umf_occ)
+m_p_both <- occu(~ date + logarea ~ 1, umf_occ)
+
+modSel(fitList(fits = list("p(.)" = m_p_null, 
+                           "p(date)" = m_p_date,
+                           "p(date+area)" = m_p_both)))
+```
+
+::: notes
+The implicit-dynamics approach: estimate AVERAGE occupancy over the five
+years and ignore colonization and extinction.
+
+The formula syntax is unmarked's and catches people out: the FIRST tilde
+is the DETECTION model, the SECOND is occupancy. So `occu(~ date ~ 1)`
+means detection varies with date, occupancy is constant.
+
+We fit the detection model first, holding occupancy constant, which is
+the book's sequence. Note fitList(fits = list(...)) rather than
+fitList("name" = model, ...) -- both work, but the explicit form is
+unambiguous.
+
+Our simulation has CONSTANT detection, so date and area should NOT
+improve the model. The book's real data strongly supported both. That
+difference is honest: their detection genuinely varied, ours does not by
+construction.
+:::
+
+## Now add area and isolation
+
+```{r}
+#| echo: true
+
+m_area   <- occu(~ date + logarea ~ logarea, umf_occ)
+m_S      <- occu(~ date + logarea ~ Sz, umf_occ)
+m_areaS  <- occu(~ date + logarea ~ logarea + Sz, umf_occ)
+
+modSel(fitList(fits = list("psi(.)" = m_p_both,
+                           "psi(area)" = m_area,
+                           "psi(S)" = m_S, 
+                           "psi(area+S)" = m_areaS)))
+round(coef(m_areaS), 3)
+```
+
+::: notes
+Now covariates on occupancy. The book's most-supported model is area +
+S, with both effects positive: as patch area and connectivity increase,
+occupancy increases. Their estimates are intercept -2.899, area 0.562, S
+0.185, and the z-value for area is much larger, so the area effect is
+stronger.
+
+Compare our estimates to those numbers -- they are the truth we
+simulated from.
+
+One subtle point the book makes well, and it is worth repeating. When
+they fitted detection alone, patch area appeared to strongly affect
+DETECTABILITY. Once area was also in the occupancy model, the detection
+effect shrank a lot. Their explanation: covariate effects on detection
+and occupancy are not formally confounded, but the model does use shared
+information during estimation. So be careful interpreting a covariate
+that plausibly affects both.
+
+Ours will show this less dramatically, because we simulated constant
+detection.
+:::
+
+## Colonization and extinction, explicitly
+
+```{r}
+#| message: false
+#| echo: true
+
+m_dyn_null <- colext(psiformula = ~ 1,
+                     gammaformula = ~ 1,
+                     epsilonformula = ~ 1,
+                     pformula = ~ 1, 
+                     data = umf_dyn)
+
+m_dyn_psi  <- colext(psiformula = ~ logarea + Sz,
+                     gammaformula = ~ 1,
+                     epsilonformula = ~ 1, 
+                     pformula = ~ 1,
+                     data = umf_dyn)
+
+m_dyn_eps  <- colext(psiformula = ~ logarea + Sz,
+                     gammaformula = ~ 1,
+                     epsilonformula = ~ logarea, 
+                     pformula = ~ 1,
+                     data = umf_dyn)
+
+m_dyn_full <- colext(psiformula = ~ logarea + Sz,
+                     gammaformula = ~ Sz,
+                     epsilonformula = ~ logarea,
+                     pformula = ~ 1,
+                     data = umf_dyn)
+
+modSel(fitList(fits = list("null" = m_dyn_null,
+                           "psi(area+S)" = m_dyn_psi,
+                           "psi(area+S) eps(area)" = m_dyn_eps,
+                           "+ gamma(S)"           = m_dyn_full)))
+```
+
+::: notes
+Four models of increasing complexity. Note colext() takes FOUR formulas:
+initial occupancy, colonization (gamma), extinction (epsilon), and
+detection.
+
+The book's model ranking puts psi(area+S) with eps(area) on top, with
+gamma(S) adding nothing -- delta AIC of 1.6, so within noise. Their
+conclusion: patch area has a strong NEGATIVE effect on extinction, and
+connectivity S is NOT a strong predictor of colonization.
+
+That is a partial failure of the area-isolation paradigm in this system,
+and it is worth dwelling on. Area does what the theory says. Isolation
+does not. The book is straightforward about it rather than reaching for
+an explanation.
+
+Our simulation has constant colonization by construction, so the
+gamma(S) model should also add nothing. Good -- that means the model
+selection is behaving.
+
+colext() is the slowest thing in this deck: it evaluates a two-state
+hidden Markov likelihood over 841 sites and 5 periods for every optim
+step.
+:::
+
+## Did it recover the truth?
+
+```{r}
+#| echo: true
+est <- coef(m_dyn_eps)
+
+# coef() for a colext fit returns psi, then col, then ext, then det. This
+# vector is in that order -- READ THE PRINTED NAMES to confirm rather than
+# trusting the order, and the stopifnot catches a length mismatch.
+truth_vec <- c(b_psi[["int"]], 
+               b_psi[["area"]],
+               b_psi[["S"]],   # psi
+               logit_g,          # col
+               b_eps[["int"]], 
+               b_eps[["area"]],  # ext
+               qlogis(p_det))     # det
+stopifnot(length(est) == length(truth_vec))
+
+data.frame(parameter  = names(est),
+           estimate   = round(as.numeric(est), 3),
+           truth      = round(truth_vec, 3),
+           difference = round(as.numeric(est) - truth_vec, 3))
+
+round(c(gamma = backTransform(m_dyn_eps, type = "col")@estimate,
+        p     = backTransform(m_dyn_eps, type = "det")@estimate), 4)
+```
+
+::: notes
+Seven parameters, side by side with the values that generated the data.
+
+Expect the psi and extinction coefficients to be close. The colonization
+intercept may be noisier, because colonization events are rare -- gamma
+is about 0.016, so across 841 patches and four transitions you observe
+relatively few. Rare events, wide confidence intervals.
+
+backTransform() converts from the logit scale to probabilities. Compare
+gamma to 0.016 and p to 0.843.
+
+Note the order of coef() output: initial occupancy, then colonization,
+then extinction, then detection. If the truth vector and the estimate
+vector were misaligned the differences would be nonsense, so read the
+parameter names, do not trust the order.
+:::
+
+## Partial predictions
+
+```{r}
+#| echo: true
+#| fig-width: 12.5
+#| fig-height: 4.8
+ar_seq <- seq(min(logarea), max(logarea), length.out = 60)
+S_seq  <- seq(min(Sz), max(Sz), length.out = 60)
+
+nd_area <- data.frame(logarea = ar_seq, Sz = mean(Sz))
+nd_S    <- data.frame(logarea = mean(logarea), Sz = S_seq)
+
+# NOTE: predict(object, type, newdata) -- name BOTH, the 2nd positional is type
+pr_psi_a <- predict(m_dyn_eps, type = "psi", newdata = nd_area)
+pr_psi_S <- predict(m_dyn_eps, type = "psi", newdata = nd_S)
+pr_ext_a <- predict(m_dyn_eps, type = "ext", newdata = nd_area)
+
+band <- function(x, p, xlab, ylab, main, truth = NULL) {
+  plot(x, p$Predicted, type = "l", lwd = 3, ylim = c(0, 1),
+       xlab = xlab, ylab = ylab, main = main)
+  lines(x, p$lower, lty = 2); lines(x, p$upper, lty = 2)
+  if (!is.null(truth)) lines(x, truth, col = "firebrick", lwd = 2.4, lty = 3)
+}
+
+op <- par(mfrow = c(1, 3), mar = c(4.4, 4.6, 3, 1))
+band(exp(ar_seq) - 1, pr_psi_a, "patch area (cm2)", "initial occupancy",
+     "psi vs area",
+     plogis(b_psi["int"] + b_psi["area"] * ar_seq + b_psi["S"] * mean(Sz)))
+band(S_seq, pr_psi_S, "connectivity S (scaled)", "", "psi vs S",
+     plogis(b_psi["int"] + b_psi["area"] * mean(logarea) + b_psi["S"] * S_seq))
+band(exp(ar_seq) - 1, pr_ext_a, "patch area (cm2)", "extinction",
+     "extinction vs area",
+     plogis(b_eps["int"] + b_eps["area"] * ar_seq))
+par(op)
+```
+
+::: notes
+extinction probability falls steeply with patch area. That is the area
+half of the area-isolation paradigm, and it is well supported.
+
+The book's summary of the comparison between the implicit and dynamic
+models is worth repeating: the area effect on average occupancy was
+driven PARTLY by extinction dynamics, and since area also explains
+occupancy at time 1, dynamics before the surveys began -- before 2000 --
+presumably contributed too.
+
+That is a nice illustration of a general point. A snapshot of occupancy
+encodes the accumulated history of colonization and extinction, and you
+cannot separate them without time series.
+:::
+
+# 3.3 Project forward {.center}
+
+## Project the fitted dynamics
+
+```{r}
+#| echo: true
+#| fig-width: 9.5
+#| fig-height: 5.4
+nd_fit  <- data.frame(logarea = logarea, Sz = Sz)
+psi_hat <- predict(m_dyn_eps, type = "psi", newdata = nd_fit)$Predicted
+col_hat <- predict(m_dyn_eps, type = "col", newdata = nd_fit)$Predicted
+ext_hat <- predict(m_dyn_eps, type = "ext", newdata = nd_fit)$Predicted
+
+colext_sim <- function(psi0, col, ext, timeframe, reps) {
+  ns <- length(psi0)
+  out <- array(NA_integer_, dim = c(reps, ns, timeframe))
+  out[, , 1] <- rbinom(reps * ns, 1, rep(psi0, each = reps))
+  for (t in 2:timeframe) {
+    prev <- out[, , t - 1]
+    pr <- prev * (1 - rep(ext, each = reps)) +
+          (1 - prev) * rep(col, each = reps)
+    out[, , t] <- rbinom(reps * ns, 1, pr)
+  }
+  out
+}
+
+set.seed(1013)
+proj <- colext_sim(psi_hat, col_hat, ext_hat, timeframe = 100, reps = 20)
+land_mean <- apply(proj, c(1, 3), mean)          # reps x time
+
+psi_star <- mean(col_hat / (col_hat + ext_hat))
+
+op <- par(mar = c(4.4, 4.6, 3, 1))
+matplot(t(land_mean), type = "l", lty = 1, col = rgb(0, 0, 0, 0.25),
+        ylim = c(0, 0.6), xlab = "time step",
+        ylab = "proportion of patches occupied",
+        main = "100-year projection, 20 realizations")
+lines(colMeans(land_mean), lwd = 3, col = "steelblue")
+abline(h = psi_star, lwd = 2.5, lty = 2, col = "firebrick")
+text(80, psi_star + 0.03, expression(psi^"*"), col = "firebrick", cex = 1.3)
+par(op)
+round(c(psi_star = psi_star, projected_end = mean(land_mean[, 100])), 3)
+```
+
+::: notes
+Twenty realizations of a 100-year projection, using patch-specific
+colonization and extinction from the fitted model. Red dashed line is
+the predicted equilibrium.
+
+Now the apparent paradox the book raises, and it is the best teaching
+moment in the chapter. Estimated extinction rates are HIGHER than
+colonization rates -- gamma \< epsilon -- and yet the projection is
+stable or rising. But the Levins model said persistence requires c \> e.
+What gives?
+
+Two reasons, and the second is the important one.
+
+First, rates vary by patch, whereas Levins assumes they do not.
+
+Second, and crucially, THE PARAMETERS ARE NOT THE SAME QUANTITY. In the
+Levins model, c is the rate of individuals EMIGRATING from occupied
+patches. In a dynamic occupancy model, gamma is the PROBABILITY THAT AN
+EMPTY PATCH BECOMES COLONIZED in one primary period. Different units,
+different meanings. Comparing them is a category error.
+
+The right equilibrium for this model is psi\* = gamma / (gamma +
+epsilon), and the projection should converge on it. Check the two
+printed numbers.
+
+Caveat the book flags: this projection ignores parameter uncertainty.
+Propagating it properly needs a Bayesian treatment (Chandler et al.
+2015).
+:::
